@@ -2,10 +2,11 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import * as fsSync from 'fs'
 import * as os from 'os'
+import Store from 'electron-store'
 import promiseIpc, { RendererProcessType } from 'electron-promise-ipc'
 import { execFile } from 'mz/child_process'
 import { Injectable, NgZone } from '@angular/core'
-import { PlatformService, ClipboardContent, Platform, MenuItemOptions, MessageBoxOptions, MessageBoxResult, DirectoryUpload, FileUpload, FileDownload, DirectoryDownload, FileUploadOptions, wrapPromise, TranslateService, FileTransfer, PlatformTheme } from 'tabby-core'
+import { FileService, PlatformService, ClipboardContent, Platform, MenuItemOptions, MessageBoxOptions, MessageBoxResult, DirectoryUpload, FileUpload, FileDownload, DirectoryDownload, FileUploadOptions, wrapPromise, TranslateService, FileTransfer, PlatformTheme } from 'tabby-core'
 import { ElectronService } from '../services/electron.service'
 import { ElectronHostWindow } from './hostWindow.service'
 import { ShellIntegrationService } from './shellIntegration.service'
@@ -21,6 +22,26 @@ try {
     // eslint-disable-next-line no-var
     var wnr = require('windows-native-registry')
 } catch { }
+
+@Injectable({ providedIn: 'root' })
+export class ElectronFileService extends FileService {
+    private store: Store<{passphrase?: string}>
+
+    constructor() {
+        super()
+    }
+
+    async loadVaultPassphrase() {
+        this.store = new Store()
+        // return this.store.get('passphrase') ?? ""
+        console.log("111: ", this.store)
+        return ""
+    }
+
+    async saveVaultPassphrase(passphrase: string) {
+        // this.store.set('passphrase', passphrase)
+    }
+}
 
 @Injectable({ providedIn: 'root' })
 export class ElectronPlatformService extends PlatformService {

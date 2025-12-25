@@ -8,7 +8,7 @@ import { UnlockVaultModalComponent } from '../components/unlockVaultModal.compon
 import { NotificationsService } from './notifications.service'
 import { SelectorService } from './selector.service'
 import { FileProvider } from '../api/fileProvider'
-import { PlatformService } from '../api/platform'
+import { FileService, PlatformService } from '../api/platform'
 
 const PBKDF_ITERATIONS = 100000
 const PBKDF_DIGEST = 'sha512'
@@ -114,6 +114,7 @@ export class VaultService {
         private zone: NgZone,
         private notifications: NotificationsService,
         private ngbModal: NgbModal,
+        private fileService: FileService,
     ) {
         this.getPassphrase = serializeFunction(this.getPassphrase.bind(this))
     }
@@ -177,6 +178,7 @@ export class VaultService {
 
     async getPassphrase (): Promise<string> {
         if (!_rememberedPassphrase) {
+            console.log("11111 file:", this.fileService.loadVaultPassphrase())
             const modal = this.ngbModal.open(UnlockVaultModalComponent)
             const { passphrase, rememberFor } = await modal.result
             setTimeout(() => {

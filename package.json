@@ -117,6 +117,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "electron-store": "8.1.0"
   }
 }
