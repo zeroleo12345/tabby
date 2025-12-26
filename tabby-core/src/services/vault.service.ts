@@ -139,13 +139,15 @@ export class VaultService {
     }
 
     async decrypt (storage: StoredVault, passphrase?: string): Promise<Vault> {
-        if (!passphrase) {
-            passphrase = await this.getPassphrase()
-        }
         try {
+            if (!passphrase) {
+                passphrase = await this.getPassphrase()
+            }
             return await wrapPromise(this.zone, decryptVault(storage, passphrase))
         } catch (e) {
+            console.log("decrypt error:", e)
             this.forgetPassphrase()
+            await this.fileService.deleteVaultPassphrase()
             if (e.toString().includes('BAD_DECRYPT')) {
                 this.notifications.error('Incorrect passphrase')
             }
@@ -179,7 +181,6 @@ export class VaultService {
     async getPassphrase (): Promise<string> {
         if (!_rememberedPassphrase) {
             _rememberedPassphrase = await this.fileService.loadVaultPassphrase()
-            console.log("111 loadVaultPassphrase:", _rememberedPassphrase)
         }
         if (!_rememberedPassphrase) {
             const modal = this.ngbModal.open(UnlockVaultModalComponent)

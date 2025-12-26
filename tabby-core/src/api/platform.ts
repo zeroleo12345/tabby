@@ -152,7 +152,9 @@ export abstract class FileService {
 
     abstract saveVaultPassphrase(passphrase: string): Promise<void>
 
-    async encrypt (plaintext: string, passphrase: string): Promise<Buffer> {
+    abstract deleteVaultPassphrase(): Promise<void>
+
+    async encrypt (plaintext: string, passphrase: string): Promise<string> {
         const salt = crypto.randomBytes(this.SALT_LENGTH)
         const iv = crypto.randomBytes(this.IV_LENGTH)
 
@@ -181,10 +183,12 @@ export abstract class FileService {
          * content format：
          * [ salt | iv | authTag | encrypted ]
          */
-        return Buffer.concat([salt, iv, authTag, encrypted])
+        const payload = Buffer.concat([salt, iv, authTag, encrypted])
+        return payload.toString('base64')
     }
 
-    async decrypt (payload: Buffer, passphrase: string): Promise<string> {
+    async decrypt (ciphertext: string, passphrase: string): Promise<string> {
+        const payload = Buffer.from(ciphertext, 'base64')
         const salt = payload.subarray(0, this.SALT_LENGTH)
         const iv = payload.subarray(
             this.SALT_LENGTH,

@@ -29,15 +29,25 @@ export class ElectronFileService extends FileService {
 
     constructor() {
         super()
-        this.store = new Store()
+        // file path: ~/Library/Application\ Support/tabby/passphrase.json
+        this.store = new Store({name: 'passphrase'})
     }
 
-    async loadVaultPassphrase() {
-        return this.store.get('passphrase') ?? ""
+    async loadVaultPassphrase(): Promise<string> {
+        const ciphertext = this.store.get('passphrase')
+        if (!ciphertext) {
+            return ''
+        }
+        return await this.decrypt(ciphertext, 'tabby')
     }
 
-    async saveVaultPassphrase(passphrase: string) {
-        this.store.set('passphrase', passphrase)
+    async saveVaultPassphrase(passphrase: string): Promise<void > {
+        const ciphertext = await this.encrypt(passphrase, 'tabby')
+        this.store.set('passphrase', ciphertext)
+    }
+
+    async deleteVaultPassphrase() {
+        this.store.delete('passphrase')
     }
 }
 
