@@ -29,17 +29,15 @@ export class ElectronFileService extends FileService {
 
     constructor() {
         super()
+        this.store = new Store()
     }
 
     async loadVaultPassphrase() {
-        this.store = new Store()
-        // return this.store.get('passphrase') ?? ""
-        console.log("111: ", this.store)
-        return ""
+        return this.store.get('passphrase') ?? ""
     }
 
     async saveVaultPassphrase(passphrase: string) {
-        // this.store.set('passphrase', passphrase)
+        this.store.set('passphrase', passphrase)
     }
 }
 
