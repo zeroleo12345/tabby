@@ -71,7 +71,6 @@ if (!app.requestSingleInstanceLock()) {
 
 app.on('ready', async () => {
     Store.initRenderer()
-    console.log('Store.initRenderer finish')
 
     if (process.platform === 'darwin') {
         app.dock.setMenu(Menu.buildFromTemplate([
