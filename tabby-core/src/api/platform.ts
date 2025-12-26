@@ -160,8 +160,6 @@ export abstract class PlatformService {
     abstract setClipboard (content: ClipboardContent): void
     abstract loadConfig (): Promise<string>
     abstract saveConfig (content: string): Promise<void>
-    // abstract loadVaultPassphrase(): Promise<string>
-    // abstract saveVaultPassphrase(passphrase: string): Promise<void>
 
     abstract startDownload (name: string, mode: number, size: number): Promise<FileDownload|null>
     abstract startDownloadDirectory (name: string, estimatedSize?: number): Promise<DirectoryDownload|null>
