@@ -178,7 +178,10 @@ export class VaultService {
 
     async getPassphrase (): Promise<string> {
         if (!_rememberedPassphrase) {
-            console.log("11111 file:", this.fileService.loadVaultPassphrase())
+            _rememberedPassphrase = await this.fileService.loadVaultPassphrase()
+            console.log("111 loadVaultPassphrase:", _rememberedPassphrase)
+        }
+        if (!_rememberedPassphrase) {
             const modal = this.ngbModal.open(UnlockVaultModalComponent)
             const { passphrase, rememberFor } = await modal.result
             setTimeout(() => {
@@ -186,6 +189,8 @@ export class VaultService {
                 // avoid multiple consequent prompts
             }, Math.max(1000, rememberFor * 60000))
             _rememberedPassphrase = passphrase
+            // get passphrase from user input
+            await this.fileService.saveVaultPassphrase(passphrase)
         }
 
         return _rememberedPassphrase!
