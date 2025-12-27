@@ -326,6 +326,12 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                 case 'scroll-to-bottom':
                     this.frontend?.scrollToBottom()
                     break
+                case 'search-up':
+                    this.searchPanel?.findPrevious()
+                    break
+                case 'search-down':
+                    this.searchPanel?.findNext()
+                    break
             }
         })
 
