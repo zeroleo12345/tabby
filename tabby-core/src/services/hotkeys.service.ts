@@ -89,12 +89,7 @@ export class HotkeysService {
             events.forEach(eventType => {
                 document.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
                     console.debug("1111 keyboard:", nativeEvent)
-                    const isMatch = this.pushKeyEvent(eventType, nativeEvent)
-                    if (isMatch) {
-                        console.debug("preventDefault and stopPropagation:", nativeEvent)
-                        nativeEvent.preventDefault()
-                        nativeEvent.stopPropagation()
-                    }
+                    this.propagationKeyEventHandler(eventType, nativeEvent)
                 })
             })
         })
@@ -104,6 +99,18 @@ export class HotkeysService {
         this.matchedHotkey.subscribe = deprecate(s => this.hotkey$.subscribe(s), 'matchedHotkey is deprecated, use hotkey$')
         this.keyEvent$.subscribe(h => this.key.next(h))
         this.key.subscribe = deprecate(s => this.keyEvent$.subscribe(s), 'key is deprecated, use keyEvent$')
+    }
+
+
+    propagationKeyEventHandler (eventName: string, nativeEvent: KeyboardEvent): boolean {
+        const isMatch = this.pushKeyEvent(eventName, nativeEvent)
+        if (isMatch) {
+            console.debug("preventDefault and stopPropagation:", nativeEvent)
+            nativeEvent.preventDefault()
+            nativeEvent.stopPropagation()
+            return false
+        }
+        return true
     }
 
     /**
@@ -204,7 +211,7 @@ export class HotkeysService {
 
     matchActiveHotkey (partial = false): string|null {
         if (!this.isEnabled() || !this.pressedKeystroke) {
-            console.log("2222 not matched, isEnabled:", this.isEnabled(), this.pressedKeystroke)
+            // console.log("2222 not matched, isEnabled:", this.isEnabled(), this.pressedKeystroke)
             return null
         }
         const matches: {
@@ -215,20 +222,20 @@ export class HotkeysService {
         const currentSequence = this.getCurrentKeystrokes()
 
         const config = this.getHotkeysConfig()
-        console.log("111 all hotkeys:", config)
+        // console.log("111 all hotkeys:", config)
         for (const id in config) {
             for (const sequence of config[id]) {
-                console.log("111 hotkey name:", id)
-                console.log("111 input:", currentSequence, currentSequence.length)
-                console.log("111 config:", sequence, sequence.length)
+                // console.log("111 hotkey name:", id)
+                // console.log("111 input:", currentSequence, currentSequence.length)
+                // console.log("111 config:", sequence, sequence.length)
                 if (currentSequence.length < sequence.length) {
-                    console.log("222222")
+                    // console.log("222222")
                     continue
                 }
-                console.log("111 pressedKeystroke:", this.pressedKeystroke)
-                console.log("111 config:", sequence, sequence.length)
+                // console.log("111 pressedKeystroke:", this.pressedKeystroke)
+                // console.log("111 config:", sequence, sequence.length)
                 if (sequence[sequence.length - 1] !== this.pressedKeystroke) {
-                    console.log("3333333")
+                    // console.log("3333333")
                     continue
                 }
 
@@ -240,15 +247,15 @@ export class HotkeysService {
                     )
                     if (nextOffset === -1) {
                         matched = false
-                        console.log("111 not match! break")
+                        // console.log("111 not match! break")
                         break
                     }
                     lastIndex += nextOffset
                 }
 
-                console.log("111 lastIndex:", lastIndex)
+                // console.log("111 lastIndex:", lastIndex)
                 if (partial ? lastIndex > 0 : matched) {
-                    console.log("111 push")
+                    // console.log("111 push")
                     matches.push({
                         id,
                         sequence,
@@ -257,16 +264,16 @@ export class HotkeysService {
             }
         }
 
-        console.log("1111 matches:", matches)
+        // console.log("1111 matches:", matches)
         matches.sort((a, b) => b.sequence.length - a.sequence.length)
         if (!matches.length) {
-            console.log("3333 not matched")
+            // console.log("3333 not matched")
             return null
         }
         if (matches[0].sequence.length > 1) {
             this.clearCurrentKeystrokes()
         }
-        console.log("4444 matched")
+        // console.log("4444 matched")
         return matches[0].id
     }
 
