@@ -169,10 +169,9 @@ export class XTermFrontend extends Frontend {
         }
 
         /*
-        * xterm.js 只触发 keyup，不触发 keydown
-        * 对于一些特殊键（F1~F12, Home, End, PgUp/PgDn 等），xterm 会：
-        * 在 keydown 阶段生成 对应的终端控制序列（escape sequence）；
-        * 然后 调用 preventDefault() 阻止事件冒泡；
+        * xterm.js only triggers keyup event, no keydown.
+        * For certain special keys like F1–F12, Home, End, PageUp/PageDown
+        * xterm calls preventDefault() to stop the event from propagating.
          */
         this.xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
             if (this.hostApp.platform !== Platform.Web) {
