@@ -232,6 +232,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         })
 
         this.subscribeUntilDestroyed(this.hotkeys.hotkey$, async hotkey => {
+            console.log("terminal receive keyEvent:", hotkey)
             if (!this.hasFocus) {
                 return
             }
