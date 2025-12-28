@@ -171,7 +171,6 @@ export class HotkeysService {
         } else {
             this.pressedKeystroke = null
         }
-        console.debug("1111 this.pressedKeys.size:", this.pressedKeys.size, this.pressedKeystroke)
 
         const hotkey = this.matchActiveHotkey(false)
         if (hotkey) {
