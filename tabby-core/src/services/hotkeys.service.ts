@@ -180,10 +180,10 @@ export class HotkeysService {
             this._key.next(getKeyName(eventData))
         })
 
-        if (process.platform === 'darwin' && eventData.metaKey && eventName === 'keydown' && !['Ctrl', 'Shift', altKeyName, metaKeyName, 'Enter'].includes(keyName)) {
-            // macOS will swallow non-modified keyups if Cmd is held down
-            this.pushKeyEvent('keyup', nativeEvent)
-        }
+        // if (process.platform === 'darwin' && eventData.metaKey && eventName === 'keydown' && !['Ctrl', 'Shift', altKeyName, metaKeyName, 'Enter'].includes(keyName)) {
+        //     // macOS will swallow non-modified keyups if Cmd is held down
+        //     this.pushKeyEvent('keyup', nativeEvent)
+        // }
 
         this.lastEventTimestamp = nativeEvent.timeStamp
     }
