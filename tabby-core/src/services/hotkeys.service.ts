@@ -91,7 +91,8 @@ export class HotkeysService {
                     console.log("1111 keyboard:", nativeEvent)
                     this._keyEvent.next(nativeEvent)
                     this.pushKeyEvent(eventType, nativeEvent)
-                    if (hostApp.platform === Platform.Web && this.matchActiveHotkey(true) !== null) {
+                    const isMatch = this.matchActiveHotkey(false) !== null
+                    if (isMatch) {
                         nativeEvent.preventDefault()
                         nativeEvent.stopPropagation()
                     }
