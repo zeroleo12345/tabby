@@ -90,8 +90,7 @@ export class HotkeysService {
                 document.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
                     console.log("1111 keyboard:", nativeEvent)
                     this._keyEvent.next(nativeEvent)
-                    this.pushKeyEvent(eventType, nativeEvent)
-                    const isMatch = this.matchActiveHotkey(false) !== null
+                    const isMatch = this.pushKeyEvent(eventType, nativeEvent)
                     if (isMatch) {
                         nativeEvent.preventDefault()
                         nativeEvent.stopPropagation()
@@ -113,11 +112,12 @@ export class HotkeysService {
      * @param eventName DOM event name
      * @param nativeEvent event object
      */
-    pushKeyEvent (eventName: string, nativeEvent: KeyboardEvent): void {
+    pushKeyEvent (eventName: string, nativeEvent: KeyboardEvent): boolean {
         if (nativeEvent.timeStamp === this.lastEventTimestamp) {
-            return
+            return false
         }
 
+        let isMatch = false
         nativeEvent['event'] = eventName
 
         const eventData = {
@@ -165,27 +165,33 @@ export class HotkeysService {
             this.pressedKeystroke = null
         }
 
-        const hotkey = this.matchActiveHotkey()
-        this.zone.run(() => {
-            if (hotkey) {
-                if (this.recognitionPhase) {
+        const hotkey = this.matchActiveHotkey(false)
+        if (hotkey) {
+            if (this.recognitionPhase) {
+                this.zone.run(() => {
                     this.emitHotkeyOn(hotkey)
-                }
-            } else if (this.pressedHotkey) {
-                this.emitHotkeyOff(this.pressedHotkey)
+                })
+                isMatch = true
             }
-        })
+        } else if (this.pressedHotkey) {
+            this.zone.run(() => {
+                if (this.pressedHotkey) {
+                    this.emitHotkeyOff(this.pressedHotkey)
+                }
+            })
+        }
 
         this.zone.run(() => {
             this._key.next(getKeyName(eventData))
         })
 
-        // if (process.platform === 'darwin' && eventData.metaKey && eventName === 'keydown' && !['Ctrl', 'Shift', altKeyName, metaKeyName, 'Enter'].includes(keyName)) {
-        //     // macOS will swallow non-modified keyups if Cmd is held down
-        //     this.pushKeyEvent('keyup', nativeEvent)
-        // }
+        if (process.platform === 'darwin' && eventData.metaKey && eventName === 'keydown' && !['Ctrl', 'Shift', altKeyName, metaKeyName, 'Enter'].includes(keyName)) {
+            // macOS will swallow non-modified keyups if Cmd is held down
+            this.pushKeyEvent('keyup', nativeEvent)
+        }
 
         this.lastEventTimestamp = nativeEvent.timeStamp
+        return isMatch
     }
 
     getCurrentKeystrokes (): Keystroke[] {
@@ -318,14 +324,14 @@ export class HotkeysService {
                 this.emitHotkeyOff(this.pressedHotkey)
             }
         }
-        console.debug('Matched hotkey', hotkey)
+        console.log('Matched hotkey', hotkey)
         this._hotkey.next(hotkey)
         this.pressedHotkey = hotkey
         this.recognitionPhase = false
     }
 
     private emitHotkeyOff (hotkey: string) {
-        console.debug('Unmatched hotkey', hotkey)
+        console.log('Unmatched hotkey', hotkey)
         this._hotkeyOff.next(hotkey)
         this.pressedHotkey = null
     }
