@@ -772,7 +772,7 @@ export class SSHSession {
     }
 
     async destroy (): Promise<void> {
-        this.logger.info('Destroying')
+        this.logger.info('222 Destroying')
         this.willDestroy.next()
         this.willDestroy.complete()
         this.serviceMessage.complete()
