@@ -141,59 +141,59 @@ export class XTermFrontend extends Frontend {
             this.xterm.loadAddon(new ImageAddon())
         }
 
-        const keyboardEventHandler = (name: string, event: KeyboardEvent) => {
-            if (this.isAlternateScreenActive()) {
-                let modifiers = 0
-                modifiers += event.ctrlKey ? 1 : 0
-                modifiers += event.altKey ? 1 : 0
-                modifiers += event.shiftKey ? 1 : 0
-                modifiers += event.metaKey ? 1 : 0
-                if (event.key.startsWith('Arrow') && modifiers === 1) {
-                    return true
-                }
-            }
+        // const keyboardEventHandler = (name: string, event: KeyboardEvent) => {
+        //     if (this.isAlternateScreenActive()) {
+        //         let modifiers = 0
+        //         modifiers += event.ctrlKey ? 1 : 0
+        //         modifiers += event.altKey ? 1 : 0
+        //         modifiers += event.shiftKey ? 1 : 0
+        //         modifiers += event.metaKey ? 1 : 0
+        //         if (event.key.startsWith('Arrow') && modifiers === 1) {
+        //             return true
+        //         }
+        //     }
+        //
+        //     // Ctrl-/
+        //     if (event.type === 'keydown' && event.key === '/' && event.ctrlKey) {
+        //         this.input.next(Buffer.from('\u001f', 'binary'))
+        //         return false
+        //     }
+        //
+        //     // Ctrl-@
+        //     if (event.type === 'keydown' && event.key === '@' && event.ctrlKey) {
+        //         this.input.next(Buffer.from('\u0000', 'binary'))
+        //         return false
+        //     }
+        //
+        //     this.hotkeysService.pushKeyEvent(name, event)
+        //
+        //     let isMatch = this.hotkeysService.matchActiveHotkey(false) !== null
+        //     // console.log("111 isMatch:", isMatch)
+        //     if (isMatch) {
+        //         // return false for stop key handler
+        //         event.stopPropagation()
+        //         event.preventDefault()
+        //         return false
+        //     }
+        //     return true
+        // }
 
-            // Ctrl-/
-            if (event.type === 'keydown' && event.key === '/' && event.ctrlKey) {
-                this.input.next(Buffer.from('\u001f', 'binary'))
-                return false
-            }
-
-            // Ctrl-@
-            if (event.type === 'keydown' && event.key === '@' && event.ctrlKey) {
-                this.input.next(Buffer.from('\u0000', 'binary'))
-                return false
-            }
-
-            this.hotkeysService.pushKeyEvent(name, event)
-
-            let isMatch = this.hotkeysService.matchActiveHotkey(false) !== null
-            // console.log("111 isMatch:", isMatch)
-            if (isMatch) {
-                // return false for stop key handler
-                event.stopPropagation()
-                event.preventDefault()
-                return false
-            }
-            return true
-        }
-
-        this.xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-            if (this.hostApp.platform !== Platform.Web) {
-                if (
-                    event.getModifierState('Meta') && event.key.toLowerCase() === 'v' ||
-                    event.key === 'Insert' && event.shiftKey
-                ) {
-                    event.preventDefault()
-                    return false
-                }
-            }
-            if (event.getModifierState('Meta') && event.key.startsWith('Arrow')) {
-                return false
-            }
-
-            return keyboardEventHandler('keydown', event)
-        })
+        // this.xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+        //     if (this.hostApp.platform !== Platform.Web) {
+        //         if (
+        //             event.getModifierState('Meta') && event.key.toLowerCase() === 'v' ||
+        //             event.key === 'Insert' && event.shiftKey
+        //         ) {
+        //             event.preventDefault()
+        //             return false
+        //         }
+        //     }
+        //     if (event.getModifierState('Meta') && event.key.startsWith('Arrow')) {
+        //         return false
+        //     }
+        //
+        //     return keyboardEventHandler('keydown', event)
+        // })
 
         this.xtermCore._scrollToBottom = this.xtermCore.scrollToBottom.bind(this.xtermCore)
         this.xtermCore.scrollToBottom = () => null
@@ -210,13 +210,13 @@ export class XTermFrontend extends Frontend {
             }
         }
 
-        const oldKeyUp = this.xtermCore._keyUp.bind(this.xtermCore)
-        this.xtermCore._keyUp = (e: KeyboardEvent) => {
-            this.xtermCore.updateCursorStyle(e)
-            if (keyboardEventHandler('keyup', e)) {
-                oldKeyUp(e)
-            }
-        }
+        // const oldKeyUp = this.xtermCore._keyUp.bind(this.xtermCore)
+        // this.xtermCore._keyUp = (e: KeyboardEvent) => {
+        //     this.xtermCore.updateCursorStyle(e)
+        //     if (keyboardEventHandler('keyup', e)) {
+        //         oldKeyUp(e)
+        //     }
+        // }
 
         this.xterm.buffer.onBufferChange(() => {
             const altBufferActive = this.xterm.buffer.active.type === 'alternate'
