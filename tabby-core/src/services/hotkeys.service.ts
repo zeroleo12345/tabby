@@ -165,11 +165,11 @@ export class HotkeysService {
             this.pressedKeystroke = null
         }
 
-        const matched = this.matchActiveHotkey()
+        const hotkey = this.matchActiveHotkey()
         this.zone.run(() => {
-            if (matched) {
+            if (hotkey) {
                 if (this.recognitionPhase) {
-                    this.emitHotkeyOn(matched)
+                    this.emitHotkeyOn(hotkey)
                 }
             } else if (this.pressedHotkey) {
                 this.emitHotkeyOff(this.pressedHotkey)
