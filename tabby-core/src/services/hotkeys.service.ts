@@ -88,7 +88,7 @@ export class HotkeysService {
 
             events.forEach(eventType => {
                 document.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
-                    console.log("1111 keyboard:", nativeEvent)
+                    console.debug("1111 keyboard:", nativeEvent)
                     this._keyEvent.next(nativeEvent)
                     const isMatch = this.pushKeyEvent(eventType, nativeEvent)
                     if (isMatch) {
@@ -324,14 +324,14 @@ export class HotkeysService {
                 this.emitHotkeyOff(this.pressedHotkey)
             }
         }
-        console.log('Matched hotkey', hotkey)
+        console.debug('Matched hotkey', hotkey)
         this._hotkey.next(hotkey)
         this.pressedHotkey = hotkey
         this.recognitionPhase = false
     }
 
     private emitHotkeyOff (hotkey: string) {
-        console.log('Unmatched hotkey', hotkey)
+        console.debug('Unmatched hotkey', hotkey)
         this._hotkeyOff.next(hotkey)
         this.pressedHotkey = null
     }
