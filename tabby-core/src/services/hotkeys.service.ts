@@ -87,8 +87,8 @@ export class HotkeysService {
             const events = ['keydown', 'keyup']
 
             events.forEach(eventType => {
-                document.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
-                    console.debug("1111 keyboard:", nativeEvent)
+                window.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
+                    console.debug("1111 keyboard non-xterm.js:", nativeEvent)
                     this.propagationKeyEventHandler(eventType, nativeEvent)
                 })
             })
@@ -101,7 +101,6 @@ export class HotkeysService {
         this.key.subscribe = deprecate(s => this.keyEvent$.subscribe(s), 'key is deprecated, use keyEvent$')
     }
 
-
     propagationKeyEventHandler (eventName: string, nativeEvent: KeyboardEvent): boolean {
         const isMatch = this.pushKeyEvent(eventName, nativeEvent)
         if (isMatch) {
@@ -109,8 +108,22 @@ export class HotkeysService {
             nativeEvent.preventDefault()
             nativeEvent.stopPropagation()
             return false
+        } else if (this.isRefresh(nativeEvent)) {
+            // Prevent Ctrl+W closing window / Ctrl+N opening new window in PWA.
+            // (No effect in a regular browser tab.)
+            nativeEvent.preventDefault()
+            return false
         }
         return true
+    }
+
+    /**
+     * @param {KeyboardEvent} e
+     * @return {boolean}
+     */
+    isRefresh (e) {
+        // 116: keyCode of "F5"
+        return e.keyCode === 116;
     }
 
     /**

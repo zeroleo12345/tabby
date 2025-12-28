@@ -174,6 +174,7 @@ export class XTermFrontend extends Frontend {
         * xterm calls preventDefault() to stop the event from propagating.
          */
         this.xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+            console.debug("1111 keyboard from xterm.js:", event)
             if (this.hostApp.platform !== Platform.Web) {
                 if (
                     event.getModifierState('Meta') && event.key.toLowerCase() === 'v' ||
@@ -190,6 +191,15 @@ export class XTermFrontend extends Frontend {
             return propagationKeyEventHandler('keydown', event)
         })
 
+        const oldKeyUp = this.xtermCore._keyUp.bind(this.xtermCore)
+        this.xtermCore._keyUp = (event: KeyboardEvent) => {
+            this.xtermCore.updateCursorStyle(event)
+            console.debug("1111 keyboard from xterm.js:", event)
+            if (propagationKeyEventHandler('keyup', event)) {
+                oldKeyUp(event)
+            }
+        }
+
         this.xtermCore._scrollToBottom = this.xtermCore.scrollToBottom.bind(this.xtermCore)
         this.xtermCore.scrollToBottom = () => null
 
@@ -202,14 +212,6 @@ export class XTermFrontend extends Frontend {
             } catch (e) {
                 // tends to throw when element wasn't shown yet
                 console.warn('Could not resize xterm', e)
-            }
-        }
-
-        const oldKeyUp = this.xtermCore._keyUp.bind(this.xtermCore)
-        this.xtermCore._keyUp = (e: KeyboardEvent) => {
-            this.xtermCore.updateCursorStyle(e)
-            if (propagationKeyEventHandler('keyup', e)) {
-                oldKeyUp(e)
             }
         }
 
