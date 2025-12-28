@@ -89,9 +89,9 @@ export class HotkeysService {
             events.forEach(eventType => {
                 document.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
                     console.debug("1111 keyboard:", nativeEvent)
-                    this._keyEvent.next(nativeEvent)
                     const isMatch = this.pushKeyEvent(eventType, nativeEvent)
                     if (isMatch) {
+                        console.debug("preventDefault and stopPropagation:", nativeEvent)
                         nativeEvent.preventDefault()
                         nativeEvent.stopPropagation()
                     }
