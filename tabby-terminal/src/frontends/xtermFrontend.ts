@@ -174,7 +174,7 @@ export class XTermFrontend extends Frontend {
         * xterm calls preventDefault() to stop the event from propagating.
          */
         this.xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-            console.debug("1111 keyboard from xterm.js:", event)
+            // console.log("1111 keyboard from xterm.js:", event)
             if (this.hostApp.platform !== Platform.Web) {
                 if (
                     event.getModifierState('Meta') && event.key.toLowerCase() === 'v' ||
@@ -194,7 +194,7 @@ export class XTermFrontend extends Frontend {
         const oldKeyUp = this.xtermCore._keyUp.bind(this.xtermCore)
         this.xtermCore._keyUp = (event: KeyboardEvent) => {
             this.xtermCore.updateCursorStyle(event)
-            console.debug("1111 keyboard from xterm.js:", event)
+            // console.log("1111 keyboard from xterm.js:", event)
             if (propagationKeyEventHandler('keyup', event)) {
                 oldKeyUp(event)
             }

@@ -88,7 +88,7 @@ export class HotkeysService {
 
             events.forEach(eventType => {
                 window.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
-                    console.debug("1111 keyboard non-xterm.js:", nativeEvent)
+                    // console.log("1111 keyboard non-xterm.js:", nativeEvent)
                     this.propagationKeyEventHandler(eventType, nativeEvent)
                 })
             })
@@ -104,7 +104,7 @@ export class HotkeysService {
     propagationKeyEventHandler (eventName: string, nativeEvent: KeyboardEvent): boolean {
         const isMatch = this.pushKeyEvent(eventName, nativeEvent)
         if (isMatch) {
-            console.debug("preventDefault and stopPropagation:", nativeEvent)
+            // console.log("preventDefault and stopPropagation:", nativeEvent)
             nativeEvent.preventDefault()
             nativeEvent.stopPropagation()
             return false
