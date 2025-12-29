@@ -79,23 +79,25 @@ jobs:
     # Work around electron-builder beta bug
     - run: ln -s ../../node_modules/electron app/node_modules
 
-    - name: Build and sign packages
-      run: scripts/build-macos.mjs
-      if: github.event_name == 'push' && (github.ref_protected || startsWith(github.ref, 'refs/tags'))
-      env:
-        ARCH: ${{matrix.arch}}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        KEYGEN_TOKEN: ${{ secrets.KEYGEN_TOKEN }}
-        CSC_LINK: ${{ secrets.CSC_LINK }}
-        CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        APPSTORE_USERNAME: ${{ secrets.APPSTORE_USERNAME }}
-        APPSTORE_PASSWORD: ${{ secrets.APPSTORE_PASSWORD }}
-        USE_HARD_LINKS: false
-        # DEBUG: electron-builder,electron-builder:*
+    # - name: Build and sign packages
+    #   run: scripts/build-macos.mjs
+    #   if: github.event_name == 'push' && (github.ref_protected || startsWith(github.ref, 'refs/tags'))
+    #   env:
+    #     ARCH: ${{matrix.arch}}
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #     KEYGEN_TOKEN: ${{ secrets.KEYGEN_TOKEN }}
+    #     CSC_LINK: ${{ secrets.CSC_LINK }}
+    #     CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+    #     APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    #     APPSTORE_USERNAME: ${{ secrets.APPSTORE_USERNAME }}
+    #     APPSTORE_PASSWORD: ${{ secrets.APPSTORE_PASSWORD }}
+    #     USE_HARD_LINKS: false
+    #     # DEBUG: electron-builder,electron-builder:*
 
     - name: Build packages without signing
-      run: scripts/build-macos.mjs
+      run: |
+        scripts/build-macos.mjs
+        codesign --deep --force --sign - dist/mac-arm64/Tabby.app
       if: "! (github.event_name == 'push' && (github.ref_protected || startsWith(github.ref, 'refs/tags')))"
       env:
         ARCH: ${{matrix.arch}}
