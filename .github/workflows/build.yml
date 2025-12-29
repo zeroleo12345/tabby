@@ -75,8 +75,6 @@ jobs:
 
     - name: Install deps
       run: |
-        git branch
-        git log | head
         yarn --network-timeout 1000000
       env:
         ARCH: ${{matrix.arch}}
