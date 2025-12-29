@@ -12,7 +12,7 @@ const electronInfo = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../node
 
 export let version = ""
 try {
-  version = childProcess.execSync('git describe --tags || echo "v0.0.1-34-gde1c5553"', { encoding:'utf-8' })
+  version = childProcess.execSync('git describe --tags', { encoding:'utf-8' })
 } catch {
   version = 'v0.0.1-34-gde1c5553'
 }
