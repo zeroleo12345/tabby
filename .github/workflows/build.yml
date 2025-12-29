@@ -81,7 +81,6 @@ jobs:
 
     - name: Webpack
       run: |
-        echo "TABBY_DEV: ${TABBY_DEV}"
         yarn run build
 
     - name: Prepackage plugins
