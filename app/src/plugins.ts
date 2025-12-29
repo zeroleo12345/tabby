@@ -237,7 +237,7 @@ export async function findPlugins (): Promise<PluginInfo[]> {
                 }
             }
 
-            console.log("111 push plugin: ", pluginInfo)
+            // console.log("111 push plugin: ", pluginInfo)
             foundPlugins.push(pluginInfo)
         }
     }
