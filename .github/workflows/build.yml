@@ -15,7 +15,7 @@ jobs:
       ) ||
       (
         github.event_name == 'pull_request' &&
-        contains(github.event.pull_request.labels.*.name, 'enhancement')
+        ${{ join(github.event.pull_request.labels.*.name, '') == '' }}
       )
 
     steps:
