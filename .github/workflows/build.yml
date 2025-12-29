@@ -15,7 +15,7 @@ jobs:
       ) ||
       (
         github.event_name == 'pull_request' &&
-        github.event.pull_request.labels.length > 0
+        size(github.event.pull_request.labels) > 0
       )
 
     steps:
