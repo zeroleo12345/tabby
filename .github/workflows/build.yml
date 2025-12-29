@@ -100,7 +100,7 @@ jobs:
         ARCH: ${{matrix.arch}}
         # DEBUG: electron-builder,electron-builder:*
 
-    - name: Package artifacts
+    - name: Prepare artifacts for dmg and zip
       run: |
         mkdir artifact-dmg
         mv dist/*.dmg artifact-dmg/
