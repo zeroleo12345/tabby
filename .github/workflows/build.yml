@@ -1,8 +1,19 @@
 name: Package-Build
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, labeled]
+
 jobs:
   Lint:
     runs-on: ubuntu-24.04
+    if: >
+      github.event_name == 'push' ||
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.labels
+      )
 
     steps:
     - name: Checkout
