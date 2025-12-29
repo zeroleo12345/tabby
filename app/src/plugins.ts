@@ -162,7 +162,11 @@ async function parsePluginInfo (pluginDir: string, packageName: string): Promise
     try {
         const info = JSON.parse(await fs.readFile(infoPath, { encoding: 'utf-8' }))
 
-        if (!info.keywords || !(info.keywords.includes('terminus-plugin') || info.keywords.includes('terminus-builtin-plugin') || info.keywords.includes('tabby-plugin') || info.keywords.includes('tabby-builtin-plugin'))) {
+        if (!info.keywords
+                || !(info.keywords.includes('terminus-plugin')
+                || info.keywords.includes('terminus-builtin-plugin')
+                || info.keywords.includes('tabby-plugin')
+                || info.keywords.includes('tabby-builtin-plugin'))) {
             return null
         }
 
@@ -217,6 +221,7 @@ export async function findPlugins (): Promise<PluginInfo[]> {
                 }
             }
 
+            console.log("111 push plugin: ", pluginInfo)
             foundPlugins.push(pluginInfo)
         }
     }
