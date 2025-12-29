@@ -80,10 +80,13 @@ jobs:
         ARCH: ${{matrix.arch}}
 
     - name: Webpack
-      run: yarn run build
+      run: |
+        echo "TABBY_DEV: ${TABBY_DEV}"
+        yarn run build
 
     - name: Prepackage plugins
-      run: scripts/prepackage-plugins.mjs
+      run: |
+        scripts/prepackage-plugins.mjs
       env:
         ARCH: ${{matrix.arch}}
 
