@@ -111,7 +111,7 @@ jobs:
     - name: Build packages without signing
       run: |
         scripts/build-macos.mjs
-        codesign --deep --force --sign - dist/mac-arm64/Tabby.app
+        find ./dist -name "Tabby.app" | xargs -I{} -t sh -c "codesign --deep --force --sign - {}"
       if: "! (github.event_name == 'push' && (github.ref_protected || startsWith(github.ref, 'refs/tags')))"
       env:
         ARCH: ${{matrix.arch}}
