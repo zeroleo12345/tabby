@@ -251,6 +251,7 @@ export class ProfileTreeComponent extends BaseComponent {
     }
 
     onDragEnd (event: CdkDragEnd) {
+        window.localStorage.profileTreeWidth = this.panelInternalWidth
     }
 
     ////// GROUP COLLAPSING //////
