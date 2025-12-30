@@ -33,7 +33,7 @@ export class ProfileTreeComponent extends BaseComponent {
 
     panelMinWidth = 200
     panelMaxWidth = 600
-    panelInternalWidth: number = parseInt(window.localStorage.profileTreeWidth ?? 300)
+    @HostBinding('style.width.px') panelInternalWidth: number = parseInt(window.localStorage.profileTreeWidth ?? 300)
 
     panelStartWidth = this.panelInternalWidth
 
@@ -248,20 +248,11 @@ export class ProfileTreeComponent extends BaseComponent {
         width = Math.max(this.panelMinWidth, width)
         width = Math.min(this.panelMaxWidth, width)
         console.log("11111:", deltaX, this.panelStartWidth, width)
-        this.panelWidth = width
+        this.panelInternalWidth = width
         event.source.setFreeDragPosition({ x: 0, y: 0 })
     }
 
     onDragEnd (event: CdkDragEnd) {
-    }
-
-    @HostBinding('style.width.px')
-    get panelWidth (): number {
-        return this.panelInternalWidth
-    }
-
-    set panelWidth (value: number) {
-        this.panelInternalWidth = value
     }
 
     ////// GROUP COLLAPSING //////
