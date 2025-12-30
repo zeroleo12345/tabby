@@ -241,13 +241,11 @@ export class ProfileTreeComponent extends BaseComponent {
     }
 
     onDragMoved (event: CdkDragMove) {
-        console.log("event:", event)
         const deltaX = event.distance.x
         let width = this.panelStartWidth + deltaX
         // min_width < x < max_width
         width = Math.max(this.panelMinWidth, width)
         width = Math.min(this.panelMaxWidth, width)
-        console.log("11111:", deltaX, this.panelStartWidth, width)
         this.panelInternalWidth = width
         event.source.setFreeDragPosition({ x: 0, y: 0 })
     }
