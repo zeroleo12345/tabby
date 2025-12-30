@@ -47,8 +47,6 @@ hotkeys:
     - 'Alt-8'
   tab-9:
     - 'Alt-9'
-  tab-10:
-    - 'Alt-0'
   split-right:
     - 'Ctrl-Shift-S'
   split-bottom:

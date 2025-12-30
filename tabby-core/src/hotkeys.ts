@@ -108,10 +108,6 @@ export class AppHotkeyProvider extends HotkeyProvider {
             name: this.translate.instant('Tab {number}', { number: 9 }),
         },
         {
-            id: 'tab-10',
-            name: this.translate.instant('Tab {number}', { number: 10 }),
-        },
-        {
             id: 'split-right',
             name: this.translate.instant('Split to the right'),
         },
