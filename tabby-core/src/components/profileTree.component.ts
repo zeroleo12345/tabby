@@ -1,4 +1,4 @@
-import { Component, HostBinding, HostListener, Input } from '@angular/core'
+import { Component, HostBinding, Input } from '@angular/core'
 import { TranslateService } from '@ngx-translate/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import deepClone from 'clone-deep'
@@ -11,6 +11,7 @@ import { PlatformService } from '../api/platform'
 import { ProfileProvider } from '../api/index'
 import { PartialProfileGroup, ProfileGroup, PartialProfile, Profile } from '../index'
 import { BaseComponent } from './base.component'
+import { CdkDragStart, CdkDragMove, CdkDragEnd } from "@angular/cdk/drag-drop";
 
 interface CollapsableProfileGroup extends ProfileGroup {
     collapsed: boolean
@@ -33,9 +34,8 @@ export class ProfileTreeComponent extends BaseComponent {
     panelMinWidth = 200
     panelMaxWidth = 600
     panelInternalWidth: number = parseInt(window.localStorage.profileTreeWidth ?? 300)
+
     panelStartWidth = this.panelInternalWidth
-    panelIsResizing = false
-    panelStartX = 0
 
     constructor (
         private app: AppService,
@@ -236,26 +236,23 @@ export class ProfileTreeComponent extends BaseComponent {
         }
     }
 
-    ////// RESIZING //////
-    startResize (event: MouseEvent): void {
-        this.panelIsResizing = true
-        this.panelStartX = event.clientX
-        this.panelStartWidth = this.panelWidth
-        event.preventDefault()
+    onDragStarted (event: CdkDragStart) {
+        this.panelStartWidth = this.panelInternalWidth
     }
 
-    @HostListener('document:mousemove', ['$event'])
-    onMouseMove (event: MouseEvent): void {
-        if (!this.panelIsResizing) { return }
-        const delta = event.clientX - this.panelStartX
-        const width = Math.min(Math.max(this.panelMinWidth, this.panelStartWidth + delta), this.panelMaxWidth)
+    onDragMoved (event: CdkDragMove) {
+        console.log("event:", event)
+        const deltaX = event.distance.x
+        let width = this.panelStartWidth + deltaX
+        // min_width < x < max_width
+        width = Math.max(this.panelMinWidth, width)
+        width = Math.min(this.panelMaxWidth, width)
+        console.log("11111:", deltaX, this.panelStartWidth, width)
         this.panelWidth = width
-        window.localStorage.profileTreeWidth = width
+        event.source.setFreeDragPosition({ x: 0, y: 0 })
     }
 
-    @HostListener('document:mouseup')
-    stopResize (): void {
-        this.panelIsResizing = false
+    onDragEnd (event: CdkDragEnd) {
     }
 
     @HostBinding('style.width.px')
