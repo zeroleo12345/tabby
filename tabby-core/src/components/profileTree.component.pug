@@ -31,7 +31,7 @@
                     ng-container(*ngFor='let profile of group.profiles')
                         a.tree-item(
                             (dblclick)='launchProfile(profile)',
-                            [style.paddingLeft.px]='(depth + 1) * 20',
+                            [style.paddingLeft.px]='(depth + 1) * 40',
                             (contextmenu)='profileContextMenu(profile, $event)',
                             href='#'
                         )
@@ -44,8 +44,6 @@
                                     .fa.fa-fw.fas.fa-play
                                 //- .action
                                 //-     .fa.fa-fw.fas.fa-eject
-
-
 
                     ng-container(*ngFor='let child of group.children')
                         ng-container(*ngTemplateOutlet='recursiveGroup; context: {$implicit: child, depth: depth + 1}')
