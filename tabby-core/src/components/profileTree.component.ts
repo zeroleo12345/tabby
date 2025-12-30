@@ -27,9 +27,8 @@ export class ProfileTreeComponent extends BaseComponent {
     profileGroups: PartialProfileGroup<ProfileGroup>[] = []
     rootGroups: PartialProfileGroup<ProfileGroup>[] = []
 
-    filteredProfiles: PartialProfile<Profile>[] = []
     @Input() filter = ''
-
+    searchStyle = {}
 
     panelMinWidth = 200
     panelMaxWidth = 600
@@ -55,6 +54,9 @@ export class ProfileTreeComponent extends BaseComponent {
         this.subscribeUntilDestroyed(this.config.changed$, () => this.loadTreeItems())
         this.app.tabsChanged$.subscribe(() => this.tabStateChanged())
         this.app.activeTabChange$.subscribe(() => this.tabStateChanged())
+        if (window.navigator.platform.startsWith('Mac') && !hostWindow.isFullscreen) {
+            this.searchStyle = {'margin-top': 'calc(var(--tabs-height) - 0.5rem)'}
+        }
     }
 
 
