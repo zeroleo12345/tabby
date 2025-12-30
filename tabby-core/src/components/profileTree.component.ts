@@ -241,8 +241,8 @@ export class ProfileTreeComponent extends BaseComponent {
     }
 
     onDragMoved (event: CdkDragMove) {
-        const deltaX = event.distance.x
-        let width = this.panelStartWidth + deltaX
+        // deltaX
+        let width = this.panelStartWidth + event.distance.x
         // min_width < x < max_width
         width = Math.max(this.panelMinWidth, width)
         width = Math.min(this.panelMaxWidth, width)
