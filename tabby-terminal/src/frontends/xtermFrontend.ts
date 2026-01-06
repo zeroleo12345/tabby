@@ -177,7 +177,7 @@ export class XTermFrontend extends Frontend {
             console.log("1111 keyboard from xterm.js:", event)
 
             if (this.hostApp.platform !== Platform.Web) {
-                if ( event.getModifierState('Alt') && event.key.toLowerCase() === 'space' ) {
+                if ( event.getModifierState('Alt') && event.key.toLowerCase() === ' ' ) {
                     event.preventDefault()
                     console.log('捕获 Alt+Space 快捷键，已阻止系统默认行为')
                     return false
