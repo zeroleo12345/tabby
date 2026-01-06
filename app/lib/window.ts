@@ -111,6 +111,16 @@ export class Window {
             this.window = new glasstron.BrowserWindow(bwOptions)
         }
 
+        // 核心：拦截 Alt+Space 快捷键
+        this.window.webContents.on('before-input-event', (event, input) => {
+            // 检测 Alt+Space 组合键
+            console.log('1111 input:', input.alt, input.key, input.type)
+            if (input.alt && input.key.toLowerCase() === 'space' && !input.type.includes('keyup')) {
+                event.preventDefault()
+                // 执行你的自定义逻辑
+            }
+        })
+
         this.webContents = this.window.webContents
 
         this.window.webContents.once('did-finish-load', () => {
@@ -135,16 +145,6 @@ export class Window {
 
             if (argv.debug) {
                 this.window.webContents.openDevTools();
-            }
-        })
-
-        // 核心：拦截 Alt+Space 快捷键
-        this.window.webContents.on('before-input-event', (event, input) => {
-            // 检测 Alt+Space 组合键
-            console.log('1111 input:', input.alt, input.key, input.type)
-            if (input.alt && input.key.toLowerCase() === 'space' && !input.type.includes('keyup')) {
-                event.preventDefault()
-                // 执行你的自定义逻辑
             }
         })
 
