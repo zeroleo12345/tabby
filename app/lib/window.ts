@@ -138,6 +138,16 @@ export class Window {
             }
         })
 
+        // 核心：拦截 Alt+Space 快捷键
+        this.window.webContents.on('before-input-event', (event, input) => {
+            // 检测 Alt+Space 组合键
+            console.log('1111 input:', input.alt, input.key, input.type)
+            if (input.alt && input.key.toLowerCase() === 'space' && !input.type.includes('keyup')) {
+                event.preventDefault()
+                // 执行你的自定义逻辑
+            }
+        })
+
         this.window.on('blur', () => {
             if (
                 (this.configStore.appearance?.dock ?? 'off') !== 'off' &&
