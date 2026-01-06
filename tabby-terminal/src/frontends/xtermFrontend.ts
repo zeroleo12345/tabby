@@ -174,17 +174,15 @@ export class XTermFrontend extends Frontend {
         * xterm calls preventDefault() to stop the event from propagating.
          */
         this.xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-            // console.log("1111 keyboard from xterm.js:", event)
+            console.log("1111 keyboard from xterm.js:", event)
 
-            // if (this.hostApp.platform !== Platform.Web) {
-            //     if (
-            //         event.getModifierState('Meta') && event.key.toLowerCase() === 'v' ||
-            //         event.key === 'Insert' && event.shiftKey
-            //     ) {
-            //         event.preventDefault()
-            //         return false
-            //     }
-            // }
+            if (this.hostApp.platform !== Platform.Web) {
+                if ( event.getModifierState('Alt') && event.key.toLowerCase() === 'space' ) {
+                    event.preventDefault()
+                    console.log('捕获 Alt+Space 快捷键，已阻止系统默认行为')
+                    return false
+                }
+            }
             // if (event.getModifierState('Meta') && event.key.startsWith('Arrow')) {
             //     return false
             // }
