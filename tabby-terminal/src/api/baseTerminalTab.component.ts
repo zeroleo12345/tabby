@@ -3,7 +3,7 @@ import { Spinner } from 'cli-spinner'
 import colors from 'ansi-colors'
 import { NgZone, OnInit, OnDestroy, Injector, ViewChild, HostBinding, Input, ElementRef, InjectFlags, Component } from '@angular/core'
 import { trigger, transition, style, animate, AnimationTriggerMetadata } from '@angular/animations'
-import { AppService, ConfigService, BaseTabComponent, HostAppService, HotkeysService, NotificationsService, Platform, LogService, Logger, TabContextMenuItemProvider, SplitTabComponent, SubscriptionContainer, MenuItemOptions, PlatformService, HostWindowService, ResettableTimeout, TranslateService, ThemesService } from 'tabby-core'
+import { AppService, ConfigService, BaseTabComponent, HostAppService, HotkeysService, NotificationsService, Platform, LogService, Logger, TabContextMenuItemProvider, SplitTabComponent, SubscriptionContainer, MenuItemOptions, PlatformService, HostWindowService, ResettableTimeout, TranslateService, ThemesService, FullyDefined } from 'tabby-core'
 
 import { BaseSession } from '../session'
 
@@ -97,7 +97,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
     frontendReady = new Subject<void>()
     size: ResizeEvent
 
-    profile: P
+    profile: FullyDefined<P>
 
     /**
      * Enables normal passthrough from session output to terminal input
@@ -454,10 +454,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
             .subscribe(visibility => {
                 if (this.frontend instanceof XTermFrontend) {
                     if (visibility) {
-                        // this.frontend.resizeHandler()
-                        const term = this.frontend.xterm as any
-                        term._core._renderService.clear()
-                        term._core._renderService.handleResize(term.cols, term.rows)
+                        this.frontend.xterm.refresh(0, this.frontend.xterm.rows - 1)
                     } else {
                         this.frontend.xterm.element?.querySelectorAll('canvas').forEach(c => {
                             c.height = c.width = 0
@@ -838,11 +835,6 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
 
         this.attachSessionHandler(this.session.destroyed$, () => {
             this.onSessionDestroyed()
-        })
-
-        this.attachSessionHandler(this.session.oscProcessor.copyRequested$, content => {
-            this.platform.setClipboard({ text: content })
-            this.notifications.notice(this.translate.instant('Copied'))
         })
     }
 
