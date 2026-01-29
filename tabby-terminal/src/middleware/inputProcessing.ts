@@ -14,13 +14,15 @@ export class InputProcessor extends SessionMiddleware {
     feedFromTerminal (data: Buffer): void {
         if (data.length === 1 && data[0] === 0x7f) {
             if (this.options.backspace === 'ctrl-h') {
+                // ^H
                 data = Buffer.from('\x08')
             } else if (this.options.backspace === 'ctrl-?') {
+                // ^?
                 data = Buffer.from('\x7f')
             } else if (this.options.backspace === 'delete') {
                 data = Buffer.from('\x1b[3~')
             } else {
-                data = Buffer.from('\x7f')
+                data = Buffer.from('\x08')
             }
         }
         this.outputToSession.next(data)
