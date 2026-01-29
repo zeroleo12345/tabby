@@ -1,3 +1,5 @@
+> https://github.com/Eugeny/tabby/blob/master/HACKING.md
+
 # Development
 yarn
 
@@ -7,7 +9,7 @@ yarn run start
 
 
 
-# Release
+# MacOS Release
 ARCH=arm64 node scripts/prepackage-plugins.mjs
 
 ARCH=arm64 node scripts/build-macos.mjs
@@ -17,5 +19,14 @@ codesign --deep --force --sign - dist/mac-arm64/Tabby.app
 codesign -dv --verbose=4 dist/mac-arm64/Tabby.app
 
 
-# Open CI
+# Windows Release
+> https://visualstudio.microsoft.com/zh-hans/vs/older-downloads/
+Visual Studio 2022
+
+node scripts/prepackage-plugins.mjs
+
+node scripts/build-windows.mjs
+
+
+# download from CI
 xattr -r -d com.apple.quarantine Tabby.app
