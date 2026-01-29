@@ -20,6 +20,9 @@ codesign -dv --verbose=4 dist/mac-arm64/Tabby.app
 
 
 # Windows Release
+> https://visualstudio.microsoft.com/zh-hans/vs/older-downloads/
+Visual Studio 2022
+
 node scripts/prepackage-plugins.mjs
 
 node scripts/build-windows.mjs
