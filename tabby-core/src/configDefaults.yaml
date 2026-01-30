@@ -51,6 +51,7 @@ vault: null
 encrypted: false
 enableExperimentalFeatures: false
 pluginBlacklist: []
+pluginList: []
 commandBlacklist: []
 providerBlacklist: []
 profileBlacklist: []

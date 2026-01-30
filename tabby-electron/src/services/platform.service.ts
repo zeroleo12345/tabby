@@ -63,6 +63,7 @@ export class ElectronPlatformService extends PlatformService {
         private zone: NgZone,
         private shellIntegration: ShellIntegrationService,
         private translate: TranslateService,
+        private config: ConfigService,
     ) {
         super()
         this.configPath = configPath
@@ -100,11 +101,23 @@ export class ElectronPlatformService extends PlatformService {
     }
 
     async installPlugin (name: string, version: string): Promise<void> {
-        await (promiseIpc as RendererProcessType).send('plugin-manager:install', name, version)
+        const ret = await (promiseIpc as RendererProcessType).send('plugin-manager:install', name, version)
+        console.log(`111 installPlugin ret: ${ret}`)
+        this.config.store.pluginList.push({
+            name: name,
+            version: version,
+        })
+        this.config.store.pluginList.sort((a, b) => a.name.localeCompare(b.name))
+        this.config.save()
     }
 
     async uninstallPlugin (name: string): Promise<void> {
-        await (promiseIpc as RendererProcessType).send('plugin-manager:uninstall', name)
+        const ret = await (promiseIpc as RendererProcessType).send('plugin-manager:uninstall', name)
+        console.log(`111 uninstall ret: ${ret}`)
+        this.config.store.pluginList = this.config.store.pluginList.filter(
+            plugin => plugin.name !== name
+        )
+        this.config.save()
     }
 
     async isProcessRunning (name: string): Promise<boolean> {
