@@ -116,7 +116,7 @@ async function getCandidateLocationsInPluginDir (pluginDir: any): Promise<{ plug
                 const scopePluginDir = path.join(pluginDir, packageName)
                 const scopePlugins = await getCandidateLocationsInPluginDir(scopePluginDir)
                 for (const scopePlugin of scopePlugins) {
-                    console.log("111 getPluginDir: ${scopePluginDir}, packageName: ${packageName}, scopePlugin:", scopePlugin)
+                    console.log(`111 getPluginDir: ${scopePluginDir}, packageName: ${packageName}, scopePlugin:`, scopePlugin)
                     candidateLocations.push(scopePlugin)
                 }
             }
