@@ -157,7 +157,7 @@ async function parsePluginInfo (pluginDir: string, packageName: string): Promise
     const pluginPath = path.join(pluginDir, packageName)
     const infoPath = path.join(pluginPath, 'package.json')
 
-    const name = packageName
+    const name = packageName.startsWith(PLUGIN_PREFIX) ? packageName.substring(PLUGIN_PREFIX.length) : packageName.substring(LEGACY_PLUGIN_PREFIX.length)
 
     try {
         const info = JSON.parse(await fs.readFile(infoPath, { encoding: 'utf-8' }))
