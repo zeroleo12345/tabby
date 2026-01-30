@@ -2,7 +2,7 @@ import axios from 'axios'
 import { compare as semverCompare } from 'semver'
 import { Observable, from, forkJoin, map, of } from 'rxjs'
 import { Injectable, Inject } from '@angular/core'
-import { Logger, LogService, PlatformService, BOOTSTRAP_DATA, BootstrapData, PluginInfo } from 'tabby-core'
+import { Logger, LogService, PlatformService, ConfigService, BOOTSTRAP_DATA, BootstrapData, PluginInfo } from 'tabby-core'
 import { PLUGIN_BLACKLIST } from '../../../app/src/pluginBlacklist'
 
 const OFFICIAL_NPM_ACCOUNT = 'eugenepankov'
@@ -17,6 +17,7 @@ export class PluginManagerService {
     private constructor (
         log: LogService,
         private platform: PlatformService,
+        private config: ConfigService,
         @Inject(BOOTSTRAP_DATA) bootstrapData: BootstrapData,
     ) {
         this.logger = log.create('pluginManager')
@@ -57,7 +58,7 @@ export class PluginManagerService {
             map(response => response.data.objects
                 .filter(item => !item.keywords?.includes('tabby-dummy-transition-plugin'))
                 .map(item => ({
-                    name: item.package.name.substring(namePrefix.length),
+                    name: item.package.name,
                     packageName: item.package.name,
                     description: item.package.description,
                     version: item.package.version,
@@ -74,7 +75,7 @@ export class PluginManagerService {
                     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                     mapping[p.name] ??= []
                     mapping[p.name].push(p)
-                    console.log(`111 plugin info, name: ${p.name}, version: ${p.version}`)
+                    console.log(`111 plugin info, name: ${p.name}, packageName: ${p.packageName}, version: ${p.version}`)
                 }
                 return Object.values(mapping).map(list => {
                     list.sort((a, b) => -semverCompare(a.version, b.version))
@@ -87,9 +88,16 @@ export class PluginManagerService {
 
     async installPlugin (plugin: PluginInfo): Promise<void> {
         try {
-            await this.platform.installPlugin(plugin.packageName, plugin.version)
+            const ret = await this.platform.installPlugin(plugin.packageName, plugin.version)
+            console.log(`111 installPlugin ret: ${ret}`)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
             this.installedPlugins.push(plugin)
+            // this.installedPlugins.sort((a, b) => a.name.localeCompare(b.name))
+            // this.config.store.pluginList.push({
+            //     name: plugin.name,
+            //     version: plugin.version,
+            // })
+            // this.config.save()
         } catch (err) {
             this.logger.error(err)
             throw err
@@ -98,8 +106,9 @@ export class PluginManagerService {
 
     async uninstallPlugin (plugin: PluginInfo): Promise<void> {
         try {
-            await this.platform.uninstallPlugin(plugin.packageName)
+            const ret = await this.platform.uninstallPlugin(plugin.packageName)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
+            this.installedPlugins.sort((a, b) => a.name.localeCompare(b.name))
         } catch (err) {
             this.logger.error(err)
             throw err

@@ -6,25 +6,7 @@ import Store from 'electron-store'
 import promiseIpc, { RendererProcessType } from 'electron-promise-ipc'
 import { execFile } from 'mz/child_process'
 import { Injectable, NgZone } from '@angular/core'
-import {
-    FileService,
-    PlatformService,
-    ClipboardContent,
-    Platform,
-    MenuItemOptions,
-    MessageBoxOptions,
-    MessageBoxResult,
-    DirectoryUpload,
-    FileUpload,
-    FileDownload,
-    DirectoryDownload,
-    FileUploadOptions,
-    wrapPromise,
-    TranslateService,
-    FileTransfer,
-    PlatformTheme,
-    ConfigService
-} from 'tabby-core'
+import { FileService, PlatformService, ClipboardContent, Platform, MenuItemOptions, MessageBoxOptions, MessageBoxResult, DirectoryUpload, FileUpload, FileDownload, DirectoryDownload, FileUploadOptions, wrapPromise, TranslateService, FileTransfer, PlatformTheme } from 'tabby-core'
 import { ElectronService } from '../services/electron.service'
 import { ElectronHostWindow } from './hostWindow.service'
 import { ShellIntegrationService } from './shellIntegration.service'
@@ -81,7 +63,6 @@ export class ElectronPlatformService extends PlatformService {
         private zone: NgZone,
         private shellIntegration: ShellIntegrationService,
         private translate: TranslateService,
-        private config: ConfigService,
     ) {
         super()
         this.configPath = configPath
@@ -119,23 +100,11 @@ export class ElectronPlatformService extends PlatformService {
     }
 
     async installPlugin (name: string, version: string): Promise<void> {
-        const ret = await (promiseIpc as RendererProcessType).send('plugin-manager:install', name, version)
-        console.log(`111 installPlugin ret: ${ret}`)
-        this.config.store.pluginList.push({
-            name: name,
-            version: version,
-        })
-        this.config.store.pluginList.sort((a, b) => a.name.localeCompare(b.name))
-        this.config.save()
+        await (promiseIpc as RendererProcessType).send('plugin-manager:install', name, version)
     }
 
     async uninstallPlugin (name: string): Promise<void> {
-        const ret = await (promiseIpc as RendererProcessType).send('plugin-manager:uninstall', name)
-        console.log(`111 uninstall ret: ${ret}`)
-        this.config.store.pluginList = this.config.store.pluginList.filter(
-            plugin => plugin.name !== name
-        )
-        this.config.save()
+        await (promiseIpc as RendererProcessType).send('plugin-manager:uninstall', name)
     }
 
     async isProcessRunning (name: string): Promise<boolean> {
