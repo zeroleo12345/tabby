@@ -111,6 +111,15 @@ async function getCandidateLocationsInPluginDir (pluginDir: any): Promise<{ plug
         const promises = []
 
         for (const packageName of pluginNames) {
+            if (packageName.startsWith('@')) {
+                // ls -al ~/Library/Application\ Support/tabby/plugins/node_modules
+                const scopePluginDir = path.join(pluginDir, packageName)
+                const scopePlugins = await getCandidateLocationsInPluginDir(scopePluginDir)
+                for (const scopePlugin of scopePlugins) {
+                    console.log("111 getPluginDir: ${scopePluginDir}, packageName: ${packageName}, scopePlugin:", scopePlugin)
+                    candidateLocations.push(scopePlugin)
+                }
+            }
             if ((packageName.startsWith(PLUGIN_PREFIX) || packageName.startsWith(LEGACY_PLUGIN_PREFIX)) && !PLUGIN_BLACKLIST.includes(packageName)) {
                 const pluginPath = path.join(pluginDir, packageName)
                 const infoPath = path.join(pluginPath, 'package.json')
@@ -196,23 +205,7 @@ export async function findPlugins (): Promise<PluginInfo[]> {
     const paths = nodeModule.globalPaths
     let foundPlugins: PluginInfo[] = []
 
-    let scopePaths = []
-    let entries
-    for (const pluginPath of paths) {
-        try {
-            entries = await fs.promises.readdir(pluginPath, {withFileTypes: true})
-        } catch (e) {
-            continue
-        }
-
-        for (const entry of entries) {
-            if (entry.isDirectory() && entry.name.startsWith('@zeroleo12345')) {
-                scopePaths.push(path.join(pluginPath, entry.name))
-            }
-        }
-    }
-
-    const candidateLocations: { pluginDir: string, packageName: string }[] = await getPluginCandidateLocation([...paths, ...scopePaths])
+    const candidateLocations: { pluginDir: string, packageName: string }[] = await getPluginCandidateLocation(paths)
 
     const foundPluginsPromises: Promise<PluginInfo|null>[] = []
     for (const { pluginDir, packageName } of candidateLocations) {
