@@ -22,7 +22,7 @@ export class PluginManagerService {
     ) {
         this.logger = log.create('pluginManager')
         this.installedPlugins = [...bootstrapData.installedPlugins]
-        this.installedPlugins.sort((a, b) => a.name.localeCompare(b.name))
+        this.installedPlugins.sort((a, b) => a.packageName.localeCompare(b.packageName))
         this.userPluginsPath = bootstrapData.userPluginsPath
     }
 
@@ -42,7 +42,7 @@ export class PluginManagerService {
                     return true
                 })
             }),
-            map(x => x.sort((a, b) => a.name.localeCompare(b.name))),
+            map(x => x.sort((a, b) => a.packageName.localeCompare(b.packageName))),
         )
     }
 
@@ -81,7 +81,7 @@ export class PluginManagerService {
                     return list[0]
                 })
             }),
-            map(plugins => plugins.sort((a, b) => a.name.localeCompare(b.name))),
+            map(plugins => plugins.sort((a, b) => a.packageName.localeCompare(b.packageName))),
         )
     }
 
@@ -90,7 +90,7 @@ export class PluginManagerService {
             await this.platform.installPlugin(plugin.packageName, plugin.version)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
             this.installedPlugins.push(plugin)
-            this.installedPlugins.sort((a, b) => a.name.localeCompare(b.name))
+            this.installedPlugins.sort((a, b) => a.packageName.localeCompare(b.packageName))
             await this.savePluginList()
         } catch (err) {
             this.logger.error(err)
@@ -102,6 +102,7 @@ export class PluginManagerService {
         try {
             await this.platform.uninstallPlugin(plugin.packageName)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
+            this.installedPlugins.sort((a, b) => a.packageName.localeCompare(b.packageName))
             await this.savePluginList()
         } catch (err) {
             this.logger.error(err)
@@ -119,6 +120,7 @@ export class PluginManagerService {
                 })
             }
         }
+        // console.log(`111 installedPlugins:`, this.installedPlugins)
         // console.log(`111 config store pluginList:`, this.config.store.pluginList)
         await this.config.save()
     }
