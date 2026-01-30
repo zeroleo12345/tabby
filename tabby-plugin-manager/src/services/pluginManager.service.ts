@@ -74,7 +74,7 @@ export class PluginManagerService {
                     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                     mapping[p.name] ??= []
                     mapping[p.name].push(p)
-                    console.log(`111 plugin info, name: ${p.name}, packageName: ${p.packageName}, version: ${p.version}`)
+                    // console.log(`111 plugin info, name: ${p.name}, packageName: ${p.packageName}, version: ${p.version}`)
                 }
                 return Object.values(mapping).map(list => {
                     list.sort((a, b) => -semverCompare(a.version, b.version))
@@ -87,16 +87,11 @@ export class PluginManagerService {
 
     async installPlugin (plugin: PluginInfo): Promise<void> {
         try {
-            const ret = await this.platform.installPlugin(plugin.packageName, plugin.version)
-            console.log(`111 installPlugin ret: ${ret}`)
+            await this.platform.installPlugin(plugin.packageName, plugin.version)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
             this.installedPlugins.push(plugin)
-            // this.installedPlugins.sort((a, b) => a.name.localeCompare(b.name))
-            // this.config.store.pluginList.push({
-            //     name: plugin.name,
-            //     version: plugin.version,
-            // })
-            // this.config.save()
+            this.installedPlugins.sort((a, b) => a.name.localeCompare(b.name))
+            await this.savePluginList()
         } catch (err) {
             this.logger.error(err)
             throw err
@@ -105,12 +100,26 @@ export class PluginManagerService {
 
     async uninstallPlugin (plugin: PluginInfo): Promise<void> {
         try {
-            const ret = await this.platform.uninstallPlugin(plugin.packageName)
+            await this.platform.uninstallPlugin(plugin.packageName)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
-            this.installedPlugins.sort((a, b) => a.name.localeCompare(b.name))
+            await this.savePluginList()
         } catch (err) {
             this.logger.error(err)
             throw err
         }
+    }
+
+    async savePluginList (): Promise<void> {
+        this.config.store.pluginList = []
+        for (const plugin of this.installedPlugins) {
+            if (!plugin.isBuiltin) {
+                this.config.store.pluginList.push({
+                    packageName: plugin.packageName,
+                    version: plugin.version,
+                })
+            }
+        }
+        // console.log(`111 config store pluginList:`, this.config.store.pluginList)
+        await this.config.save()
     }
 }
