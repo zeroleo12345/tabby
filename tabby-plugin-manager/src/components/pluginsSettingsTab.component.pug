@@ -31,7 +31,7 @@ ul.nav-tabs.mb-2(ngbNav, #nav='ngbNav')
                     ngb-panel(*ngIf='!isAlreadyInstalled(plugin)')
                         ng-template(ngbPanelTitle)
                             .text-left
-                                strong.d-block {{plugin.name}}
+                                strong.d-block {{plugin.packageName}}
                                 small.d-block.text-muted {{plugin.description}}
                         ng-template(ngbPanelContent)
                             .row
@@ -75,7 +75,7 @@ ul.nav-tabs.mb-2(ngbNav, #nav='ngbNav')
                         ng-template(ngbPanelTitle)
                             .text-left.me-auto
                                 div.d-inline-flex.align-items-center.gap-2
-                                    strong([ngClass]="{'text-decoration-line-through text-muted': !isPluginEnabled(plugin)}") {{plugin.name}}
+                                    strong([ngClass]="{'text-decoration-line-through text-muted': !isPluginEnabled(plugin)}") {{plugin.packageName}}
                                     small.text-info.ms-2(*ngIf='plugin.isBuiltin', translate) Built-in
                                     small.text-success.ms-2(*ngIf='!plugin.isBuiltin', translate) Community
                                     small.text-warning.ms-2.fw-bold(*ngIf='!isPluginEnabled(plugin)', translate) Disabled
