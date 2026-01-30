@@ -114,11 +114,24 @@ async function getCandidateLocationsInPluginDir (pluginDir: any): Promise<{ plug
             if (packageName.startsWith('@')) {
                 // ls -al ~/Library/Application\ Support/tabby/plugins/node_modules
                 const scopePluginDir = path.join(pluginDir, packageName)
-                const scopePlugins = await getCandidateLocationsInPluginDir(scopePluginDir)
-                for (const scopePlugin of scopePlugins) {
-                    console.log(`111 getPluginDir: ${scopePluginDir}, packageName: ${packageName}, scopePlugin:`, scopePlugin)
-                    candidateLocations.push(scopePlugin)
+                const pluginNames = await fs.readdir(scopePluginDir)
+                for (const scopePackageName of pluginNames) {
+                    if ((scopePackageName.startsWith(PLUGIN_PREFIX) || scopePackageName.startsWith(LEGACY_PLUGIN_PREFIX)) && !PLUGIN_BLACKLIST.includes(scopePackageName)) {
+                        console.log(`scopePackageName: ${scopePackageName}`)
+                        const pluginPath = path.join(pluginDir, packageName, scopePackageName)
+                        const infoPath = path.join(pluginPath, 'package.json')
+                        promises.push(fs.exists(infoPath).then(result => {
+                            if (result) {
+                                candidateLocations.push({
+                                    pluginDir: pluginDir,
+                                    packageName: `${packageName}/${scopePackageName}`,
+                                })
+                                console.log(`pluginDir: ${pluginDir}, packageName: ${packageName}/${scopePackageName}`)
+                            }
+                        }))
+                    }
                 }
+                continue
             }
             if ((packageName.startsWith(PLUGIN_PREFIX) || packageName.startsWith(LEGACY_PLUGIN_PREFIX)) && !PLUGIN_BLACKLIST.includes(packageName)) {
                 const pluginPath = path.join(pluginDir, packageName)
