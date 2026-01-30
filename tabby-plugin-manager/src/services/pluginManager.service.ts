@@ -74,7 +74,7 @@ export class PluginManagerService {
                     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                     mapping[p.name] ??= []
                     mapping[p.name].push(p)
-                    console.log(`111 plugin info, name: ${p.name}, version: ${p.name}`)
+                    console.log(`111 plugin info, name: ${p.name}, version: ${p.version}`)
                 }
                 return Object.values(mapping).map(list => {
                     list.sort((a, b) => -semverCompare(a.version, b.version))
