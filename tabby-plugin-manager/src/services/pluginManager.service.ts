@@ -58,7 +58,7 @@ export class PluginManagerService {
             map(response => response.data.objects
                 .filter(item => !item.keywords?.includes('tabby-dummy-transition-plugin'))
                 .map(item => ({
-                    name: item.package.name,
+                    name: item.package.name.substring(namePrefix.length),
                     packageName: item.package.name,
                     description: item.package.description,
                     version: item.package.version,
