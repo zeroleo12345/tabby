@@ -88,7 +88,7 @@ export class HotkeysService {
 
             events.forEach(eventType => {
                 window.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
-                    // console.log("1111 keyboard non-xterm.js:", nativeEvent)
+                    // console.log("111 keyboard non-xterm.js:", nativeEvent)
                     this.propagationKeyEventHandler(eventType, nativeEvent)
                 })
             })
