@@ -237,14 +237,14 @@ export async function findPlugins (): Promise<PluginInfo[]> {
                 }
             }
 
-            // console.log("111 push plugin: ", pluginInfo)
+            // console.log(`111 push plugin: ${pluginInfo}`)
             foundPlugins.push(pluginInfo)
         }
     }
 
     foundPlugins.sort((a, b) => a.name > b.name ? 1 : -1)
     foundPlugins.sort((a, b) => a.isBuiltin < b.isBuiltin ? 1 : -1)
-    // console.log("111 foundPlugins:", foundPlugins)
+    // console.log(`111 foundPlugins: ${foundPlugins}`)
     return foundPlugins
 }
 
