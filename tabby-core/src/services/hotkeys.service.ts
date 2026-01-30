@@ -88,7 +88,7 @@ export class HotkeysService {
 
             events.forEach(eventType => {
                 window.addEventListener(eventType, (nativeEvent: KeyboardEvent) => {
-                    // console.log(`111 keyboard non-xterm.js:", nativeEvent)
+                    // console.log("111 keyboard non-xterm.js:", nativeEvent)
                     this.propagationKeyEventHandler(eventType, nativeEvent)
                 })
             })
@@ -223,7 +223,7 @@ export class HotkeysService {
 
     matchActiveHotkey (partial = false): string|null {
         if (!this.isEnabled() || !this.pressedKeystroke) {
-            // console.log(`111 not matched, isEnabled: ${this.isEnabled()}, pressedKeystroke: ${this.pressedKeystroke}`)
+            // console.log("111 not matched, isEnabled:", this.isEnabled(), this.pressedKeystroke)
             return null
         }
         const matches: {
@@ -234,20 +234,20 @@ export class HotkeysService {
         const currentSequence = this.getCurrentKeystrokes()
 
         const config = this.getHotkeysConfig()
-        // console.log(`111 all hotkeys: ${config}`)
+        // console.log("111 all hotkeys:", config)
         for (const id in config) {
             for (const sequence of config[id]) {
-                // console.log(`111 hotkey name: ${id}`)
-                // console.log(`111 input: ${currentSequence}, ${currentSequence.length})
-                // console.log(`111 config: ${sequence}, ${sequence.length})
+                // console.log("111 hotkey name:", id)
+                // console.log("111 input:", currentSequence, currentSequence.length)
+                // console.log("111 config:", sequence, sequence.length)
                 if (currentSequence.length < sequence.length) {
-                    // console.log(`111 continue-1`)
+                    // console.log("111 continue-1")
                     continue
                 }
-                // console.log(`111 pressedKeystroke: ${this.pressedKeystroke})
-                // console.log(`111 config: ${sequence}, length: ${sequence.length})
+                // console.log("111 pressedKeystroke:", this.pressedKeystroke)
+                // console.log("111 config:", sequence, sequence.length)
                 if (sequence[sequence.length - 1] !== this.pressedKeystroke) {
-                    // console.log(`111 continue-2`)
+                    // console.log("111 continue-2")
                     continue
                 }
 
@@ -259,15 +259,15 @@ export class HotkeysService {
                     )
                     if (nextOffset === -1) {
                         matched = false
-                        // console.log(`111 not match! break`)
+                        // console.log("111 not match! break")
                         break
                     }
                     lastIndex += nextOffset
                 }
 
-                // console.log(`111 lastIndex: ${lastIndex})
+                // console.log("111 lastIndex:", lastIndex)
                 if (partial ? lastIndex > 0 : matched) {
-                    // console.log(`111 push`)
+                    // console.log("111 push")
                     matches.push({
                         id,
                         sequence,
@@ -276,16 +276,16 @@ export class HotkeysService {
             }
         }
 
-        // console.log(`111 matches: ${matches}`)
+        // console.log("111 matches:", matches)
         matches.sort((a, b) => b.sequence.length - a.sequence.length)
         if (!matches.length) {
-            // console.log(`111 not matched`)
+            // console.log("111 not matched")
             return null
         }
         if (matches[0].sequence.length > 1) {
             this.clearCurrentKeystrokes()
         }
-        // console.log(`111 matched`)
+        // console.log("111 matched")
         return matches[0].id
     }
 

@@ -232,7 +232,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         })
 
         this.subscribeUntilDestroyed(this.hotkeys.unfilteredHotkey$, async hotkey => {
-            // console.log(`111 terminal receive keyEvent: ${hotkey}`)
+            // console.log("111 terminal receive keyEvent:", hotkey)
             if (!this.hasFocus) {
                 return
             }
@@ -496,14 +496,14 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
      * Feeds input into the active session
      */
     sendInput (data: string|Buffer): void {
-        // console.log(`111 sendInput: ${data}`)
+        // console.log("111 sendInput: ", data)
         if (!(data instanceof Buffer)) {
             data = Buffer.from(data, 'utf-8')
         }
         // 222 打印调用者
         // const stack = new Error().stack
         // const caller = stack?.split('\n')[2]?.trim()
-        // console.log(`111 sendInput called by: ${caller}`)
+        // console.log("111 sendInput called by:", caller)
 
         this.session?.feedFromTerminal(data)
         if (this.config.store.terminal.scrollOnInput && !data.equals(OSC_FOCUS_IN) && !data.equals(OSC_FOCUS_OUT)) {
