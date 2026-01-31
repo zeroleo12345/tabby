@@ -56,7 +56,7 @@ export class Application {
         })
 
         ;(promiseIpc as any).on('plugin-manager:sync', (name, version) => {
-            console.log(`sync plugin: ${name}:${version}`)
+            console.log(`sync plugin: ${name}@${version}`)
             return pluginManager.install(this.userPluginsPath, name, version)
         })
 
