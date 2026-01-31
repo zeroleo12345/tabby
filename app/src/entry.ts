@@ -66,10 +66,14 @@ ipcRenderer.once('start', async (_$event, bootstrapData: BootstrapData) => {
         plugins = plugins.filter(x => !bootstrapData.config.pluginBlacklist.includes(x.name))
     }
     plugins = plugins.filter(x => x.name !== 'web')
-    console.log(`111 config pluginList:`, bootstrapData.config.pluginList)
-    const packageName = "tabby-send-input"
-    const version = "0.0.6"
-    await (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version)
+
+    const installedPackageNames = new Set(
+      bootstrapData.installedPlugins.map(item => item.packageName)
+    )
+
+    for (const {packageName, version} of bootstrapData.config.pluginList.filter(plugin => !installedPackageNames.has(plugin.packageName))) {
+        await (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version)
+    }
 
     console.log('Starting with plugins:', plugins)
     try {

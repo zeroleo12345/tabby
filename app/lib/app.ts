@@ -56,7 +56,7 @@ export class Application {
         })
 
         ;(promiseIpc as any).on('plugin-manager:sync', (name, version) => {
-            console.log(`111 sync plugins: ${name}:${version}`)
+            console.log(`111 sync plugin: ${name}:${version}`)
         })
 
         ;(promiseIpc as any).on('get-default-mac-shell', async () => {
