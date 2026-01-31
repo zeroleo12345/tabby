@@ -2,7 +2,7 @@ import axios from 'axios'
 import { compare as semverCompare } from 'semver'
 import { Observable, from, forkJoin, map, of } from 'rxjs'
 import { Injectable, Inject } from '@angular/core'
-import { Logger, LogService, PlatformService, BOOTSTRAP_DATA, BootstrapData, PluginInfo } from 'tabby-core'
+import { Logger, LogService, PlatformService, ConfigService, BOOTSTRAP_DATA, BootstrapData, PluginInfo } from 'tabby-core'
 import { PLUGIN_BLACKLIST } from '../../../app/src/pluginBlacklist'
 
 const OFFICIAL_NPM_ACCOUNT = 'eugenepankov'
@@ -17,17 +17,17 @@ export class PluginManagerService {
     private constructor (
         log: LogService,
         private platform: PlatformService,
+        private config: ConfigService,
         @Inject(BOOTSTRAP_DATA) bootstrapData: BootstrapData,
     ) {
         this.logger = log.create('pluginManager')
         this.installedPlugins = [...bootstrapData.installedPlugins]
-        this.installedPlugins.sort((a, b) => a.name.localeCompare(b.name))
+        this.installedPlugins.sort((a, b) => a.packageName.localeCompare(b.packageName))
         this.userPluginsPath = bootstrapData.userPluginsPath
     }
 
     listAvailable (query?: string): Observable<PluginInfo[]> {
         return forkJoin(
-            this._listAvailableInternal('@zeroleo12345/', '@zeroleo12345/tabby-plugin', query),
             this._listAvailableInternal('tabby-', 'tabby-plugin', query),
             this._listAvailableInternal('terminus-', 'terminus-plugin', query),
         ).pipe(
@@ -42,7 +42,7 @@ export class PluginManagerService {
                     return true
                 })
             }),
-            map(x => x.sort((a, b) => a.name.localeCompare(b.name))),
+            map(x => x.sort((a, b) => a.packageName.localeCompare(b.packageName))),
         )
     }
 
@@ -74,13 +74,14 @@ export class PluginManagerService {
                     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                     mapping[p.name] ??= []
                     mapping[p.name].push(p)
+                    // console.log(`111 plugin info, name: ${p.name}, packageName: ${p.packageName}, version: ${p.version}`)
                 }
                 return Object.values(mapping).map(list => {
                     list.sort((a, b) => -semverCompare(a.version, b.version))
                     return list[0]
                 })
             }),
-            map(plugins => plugins.sort((a, b) => a.name.localeCompare(b.name))),
+            map(plugins => plugins.sort((a, b) => a.packageName.localeCompare(b.packageName))),
         )
     }
 
@@ -89,6 +90,8 @@ export class PluginManagerService {
             await this.platform.installPlugin(plugin.packageName, plugin.version)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
             this.installedPlugins.push(plugin)
+            this.installedPlugins.sort((a, b) => a.packageName.localeCompare(b.packageName))
+            await this.savePluginList()
         } catch (err) {
             this.logger.error(err)
             throw err
@@ -99,9 +102,26 @@ export class PluginManagerService {
         try {
             await this.platform.uninstallPlugin(plugin.packageName)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
+            this.installedPlugins.sort((a, b) => a.packageName.localeCompare(b.packageName))
+            await this.savePluginList()
         } catch (err) {
             this.logger.error(err)
             throw err
         }
+    }
+
+    async savePluginList (): Promise<void> {
+        this.config.store.pluginList = []
+        for (const plugin of this.installedPlugins) {
+            if (!plugin.isBuiltin) {
+                this.config.store.pluginList.push({
+                    packageName: plugin.packageName,
+                    version: plugin.version,
+                })
+            }
+        }
+        // console.log(`111 installedPlugins:`, this.installedPlugins)
+        // console.log(`111 config store pluginList:`, this.config.store.pluginList)
+        await this.config.save()
     }
 }

@@ -31,8 +31,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - arch: x86_64
-            rust_triple: x86_64-apple-darwin
           - arch: arm64
             rust_triple: aarch64-apple-darwin
       fail-fast: false
@@ -110,8 +108,6 @@ jobs:
         include:
           - arch: x64
             rust_triple: x86_64-pc-windows-msvc
-          - arch: arm64
-            rust_triple: aarch64-pc-windows-msvc
       fail-fast: false
 
     env:

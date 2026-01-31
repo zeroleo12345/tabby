@@ -1,5 +1,5 @@
-import { NgModule } from '@angular/core'
-import { FileService, PlatformService, LogService, UpdaterService, DockingService, HostAppService, ThemesService, Platform, AppService, ConfigService, WIN_BUILD_FLUENT_BG_SUPPORTED, isWindowsBuild, HostWindowService, HotkeyProvider, ConfigProvider, FileProvider } from 'tabby-core'
+import {Inject, NgModule} from '@angular/core'
+import { FileService, PlatformService, LogService, UpdaterService, DockingService, HostAppService, ThemesService, Platform, AppService, ConfigService, WIN_BUILD_FLUENT_BG_SUPPORTED, isWindowsBuild, HostWindowService, HotkeyProvider, ConfigProvider, FileProvider, BOOTSTRAP_DATA, BootstrapData } from 'tabby-core'
 import { TerminalColorSchemeProvider, TerminalDecorator } from 'tabby-terminal'
 import { SFTPContextMenuItemProvider, SSHProfileImporter, AutoPrivateKeyLocator } from 'tabby-ssh'
 import { PTYInterface, ShellProvider, UACService } from 'tabby-local'
@@ -38,6 +38,7 @@ import { WindowsDefaultShellProvider } from './shells/winDefault'
 import { WindowsStockShellsProvider } from './shells/windowsStock'
 import { WSLShellProvider } from './shells/wsl'
 import { VSDevToolsProvider } from './shells/vs'
+import promiseIpc, {RendererProcessType} from "electron-promise-ipc";
 
 @NgModule({
     providers: [
@@ -94,6 +95,7 @@ export default class ElectronModule {
         themeService: ThemesService,
         app: AppService,
         dockMenu: DockMenuService,
+        @Inject(BOOTSTRAP_DATA) private bootstrapData: BootstrapData,
     ) {
         config.ready$.toPromise().then(() => {
             touchbar.update()
@@ -143,6 +145,17 @@ export default class ElectronModule {
 
         config.ready$.toPromise().then(() => {
             dockMenu.update()
+        })
+
+        app.ready$.subscribe(async () => {
+            const installedPackageNames = new Set(
+                bootstrapData.installedPlugins.map(item => item.packageName)
+            )
+
+            for (const {packageName, version} of this.config.store.pluginList.filter(plugin => !installedPackageNames.has(plugin.packageName))) {
+                await (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version)
+                this.config.requestRestart()
+            }
         })
     }
 
