@@ -153,7 +153,6 @@ export default class ElectronModule {
             )
 
             for (const {packageName, version} of this.config.store.pluginList.filter(plugin => !installedPackageNames.has(plugin.packageName))) {
-                console.log(`111 app ready`)
                 await (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version)
                 this.config.requestRestart()
             }
