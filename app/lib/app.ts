@@ -55,6 +55,10 @@ export class Application {
             return pluginManager.uninstall(this.userPluginsPath, name)
         })
 
+        ;(promiseIpc as any).on('plugin-manager:sync', (name, version) => {
+            console.log(`111 sync plugins: ${name}:${version}`)
+        })
+
         ;(promiseIpc as any).on('get-default-mac-shell', async () => {
             try {
                 return (await exec(`/usr/bin/dscl . -read /Users/${process.env.LOGNAME} UserShell`))[0].toString().split(' ')[1].trim()

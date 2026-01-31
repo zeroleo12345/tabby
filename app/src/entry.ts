@@ -12,6 +12,7 @@ import { enableProdMode, NgModuleRef, ApplicationRef } from '@angular/core'
 import { enableDebugTools } from '@angular/platform-browser'
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic'
 import { ipcRenderer } from 'electron'
+import promiseIpc, { RendererProcessType } from 'electron-promise-ipc'
 
 import { getRootModule } from './app.module'
 import { BootstrapData, BOOTSTRAP_DATA, PluginInfo } from '../../tabby-core/src/api/mainProcess'
@@ -65,6 +66,10 @@ ipcRenderer.once('start', async (_$event, bootstrapData: BootstrapData) => {
         plugins = plugins.filter(x => !bootstrapData.config.pluginBlacklist.includes(x.name))
     }
     plugins = plugins.filter(x => x.name !== 'web')
+    console.log(`111 config pluginList:`, bootstrapData.config.pluginList)
+    const packageName = "tabby-send-input"
+    const version = "0.0.6"
+    await (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version)
 
     console.log('Starting with plugins:', plugins)
     try {
