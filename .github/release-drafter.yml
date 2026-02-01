@@ -1,0 +1,39 @@
+name-template: 'Release $RESOLVED_VERSION'
+tag-template: '$RESOLVED_VERSION'
+
+categories:
+  - title: 🚀 Features
+    labels:
+      - feat
+      - feature
+      - enhancement
+
+  - title: 🐛 Bug Fixes
+    labels:
+      - fix
+      - bug
+      - bugfix
+
+  - title: 🧰 Maintenance
+    labels:
+      - chore
+      - refactor
+      - ci
+      - docs
+
+change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
+no-changes-template: '- No changes'
+
+version-resolver:
+  major:
+    labels: [major]
+  minor:
+    labels: [minor, feat]
+  patch:
+    labels: [patch, fix]
+  default: patch
+
+template: |
+  ## What’s Changed
+
+  $CHANGES

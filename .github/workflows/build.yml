@@ -195,9 +195,15 @@ jobs:
         with:
           path: dist
 
+      - name: Draft release notes
+        uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+
       - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
+          generate_release_notes: false
           files: |
             dist/**/*.dmg
             dist/**/*.zip
