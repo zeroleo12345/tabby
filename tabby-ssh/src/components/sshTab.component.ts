@@ -192,6 +192,9 @@ export class SSHTabComponent extends ConnectableTerminalTabComponent<SSHProfile>
     }
 
     async canClose (): Promise<boolean> {
+        if (this.session?.open) {
+            return false
+        }
         if (!this.session?.open) {
             return true
         }

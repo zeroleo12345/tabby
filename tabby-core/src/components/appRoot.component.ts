@@ -143,6 +143,11 @@ export class AppRootComponent {
         })
 
         this.hostWindow.windowCloseRequest$.subscribe(async () => {
+            for (const tab of this.app.tabs) {
+                if (! await tab.canClose()) {
+                    return
+                }
+            }
             this.app.closeWindow()
         })
 
