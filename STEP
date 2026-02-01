@@ -5,11 +5,11 @@ yarn
 
 yarn run watch  # yarn run build
 
-yarn run start
+yarn run start  # RUST_LOG=trace
 
 
 
-# MacOS Release
+# MacOS Release from local build
 ARCH=arm64 node scripts/prepackage-plugins.mjs
 
 ARCH=arm64 node scripts/build-macos.mjs
@@ -19,13 +19,17 @@ codesign --deep --force --sign - dist/mac-arm64/Tabby.app
 codesign -dv --verbose=4 dist/mac-arm64/Tabby.app
 
 
-# Windows Release
+# Windows Release from local build
 > https://visualstudio.microsoft.com/zh-hans/vs/older-downloads/
 Visual Studio 2022
 
-node scripts/prepackage-plugins.mjs
+ARCH=x64 node scripts/prepackage-plugins.mjs
 
-node scripts/build-windows.mjs
+ARCH=x64 node scripts/build-windows.mjs
+
+
+# MacOS Release from Github Action (.dmg)
+System settings... -> Privacy & Security -> "Tabby" was blocked to protect your Mac. -> Open Anyway
 
 
 # download from CI

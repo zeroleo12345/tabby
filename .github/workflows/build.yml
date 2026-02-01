@@ -1,33 +1,55 @@
 name: Package-Build
 
+
 on:
   push:
   pull_request:
     types: [opened, synchronize, labeled]
 
+
 jobs:
   Lint:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: >
       (
         github.event_name == 'push' &&
-        startsWith(github.ref, 'refs/heads/zlx-base-')
+        github.ref_protected || startsWith(github.ref, 'refs/tags/v')
       ) ||
       (
         github.event_name == 'pull_request' &&
         contains(github.event.pull_request.labels.*.name, 'enhancement')
       )
+    # startsWith(github.ref, 'refs/heads/zlx-base-')
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - run: echo "Lint skipped"
+
+
+  Draft-Release:
+    runs-on: ubuntu-latest
+    needs:
+      - Lint
+    if: >
+      (
+        github.event_name == 'push' &&
+        github.ref_protected || startsWith(github.ref, 'refs/tags/v')
+      )
+
+    steps:
+      - name: Draft release notes
+        uses: release-drafter/release-drafter@v6
+        with:
+          name: ${{ github.ref_name }}
+          tag: ${{ github.ref_name }}
+          initial-commits-since: "2025-12-26T00:00:00Z"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
 
 
   macOS-Build:
     runs-on: macos-15
-    needs: Lint
+    needs:
+      - Lint
     strategy:
       matrix:
         include:
@@ -39,70 +61,71 @@ jobs:
       RUST_TARGET_TRIPLE: ${{matrix.rust_triple}}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Installing Node
-      uses: actions/setup-node@v4.4.0
-      with:
-        node-version: 22.21.1
+      - name: Installing Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22.21.1
 
-    - run: rustup target add ${{matrix.rust_triple}}
+      - run: rustup target add ${{matrix.rust_triple}}
 
-    - name: Install deps
-      run: |
-        yarn --network-timeout 1000000
-      env:
-        ARCH: ${{matrix.arch}}
+      - name: Install deps
+        run: |
+          yarn --network-timeout 1000000
+        env:
+          ARCH: ${{matrix.arch}}
 
-    - name: Webpack
-      run: |
-        yarn run build
+      - name: Webpack
+        run: |
+          yarn run build
 
-    - name: Prepackage plugins
-      run: |
-        scripts/prepackage-plugins.mjs
-      env:
-        ARCH: ${{matrix.arch}}
+      - name: Prepackage plugins
+        run: |
+          scripts/prepackage-plugins.mjs
+        env:
+          ARCH: ${{matrix.arch}}
 
-    - run: sed -i '' 's/updateInfo = await/\/\/updateInfo = await/g' node_modules/app-builder-lib/out/targets/ArchiveTarget.js
+      - run: sed -i '' 's/updateInfo = await/\/\/updateInfo = await/g' node_modules/app-builder-lib/out/targets/ArchiveTarget.js
 
-    # Work around electron-builder beta bug
-    # - run: ln -s ../../node_modules/electron app/node_modules
+      # Work around electron-builder beta bug
+      # - run: ln -s ../../node_modules/electron app/node_modules
 
-    - name: Build packages without signing
-      run: |
-        scripts/build-macos.mjs
-        find ./dist -name "Tabby.app" | xargs -I{} -t sh -c "codesign --deep --force --sign - {}"
-      env:
-        ARCH: ${{matrix.arch}}
-        # DEBUG: electron-builder,electron-builder:*
+      - name: Build packages without signing
+        run: |
+          scripts/build-macos.mjs
+          find ./dist -name "Tabby.app" | xargs -I{} -t sh -c "codesign --deep --force --sign - {}"
+        env:
+          ARCH: ${{matrix.arch}}
+          # DEBUG: electron-builder,electron-builder:*
 
-    - name: Prepare artifacts for dmg and zip
-      run: |
-        mkdir artifact-dmg
-        mv dist/*.dmg artifact-dmg/
-        mkdir artifact-zip
-        mv dist/*.zip artifact-zip/
+      - name: Prepare artifacts for dmg and zip
+        run: |
+          mkdir artifact-dmg
+          mv dist/*.dmg artifact-dmg/
+          mkdir artifact-zip
+          mv dist/*.zip artifact-zip/
 
-    - uses: actions/upload-artifact@master
-      name: Upload DMG
-      with:
-        name: macOS .dmg (${{matrix.arch}})
-        path: artifact-dmg
+      - uses: actions/upload-artifact@master
+        name: Upload DMG
+        with:
+          name: macOS .dmg (${{matrix.arch}})
+          path: artifact-dmg
 
-    - uses: actions/upload-artifact@master
-      name: Upload ZIP
-      with:
-        name: macOS .zip (${{matrix.arch}})
-        path: artifact-zip
+      - uses: actions/upload-artifact@master
+        name: Upload ZIP
+        with:
+          name: macOS .zip (${{matrix.arch}})
+          path: artifact-zip
 
 
   Windows-Build:
     runs-on: windows-latest
-    needs: Lint
+    needs:
+      - Lint
     strategy:
       matrix:
         include:
@@ -115,54 +138,89 @@ jobs:
       ARCH: ${{matrix.arch}}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Installing Node
-      uses: actions/setup-node@v4.4.0
-      with:
-        node-version: 22
+      - name: Installing Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22
 
-    - run: npm i -g npx
-    - run: rustup target add ${{matrix.rust_triple}}
+      - run: npm i -g npx
+      - run: rustup target add ${{matrix.rust_triple}}
 
-    - name: Update node-gyp
-      run: |
-        npm install --global node-gyp@10.2.0
-        npm prefix -g | % {npm config set node_gyp "$_\node_modules\node-gyp\bin\node-gyp.js"}
+      - name: Update node-gyp
+        run: |
+          npm install --global node-gyp@10.2.0
+          npm prefix -g | % {npm config set node_gyp "$_\node_modules\node-gyp\bin\node-gyp.js"}
 
-    - name: Build
-      shell: powershell
-      run: |
-        npm i -g yar node-gyp
-        yarn --network-timeout 1000000
-        yarn run build
-        node scripts/prepackage-plugins.mjs
-      env:
-        ARCH: ${{matrix.arch}}
+      - name: Build
+        shell: powershell
+        run: |
+          npm i -g yar node-gyp
+          yarn --network-timeout 1000000
+          yarn run build
+          node scripts/prepackage-plugins.mjs
+        env:
+          ARCH: ${{matrix.arch}}
 
-    - name: Build packages without signing
-      run: node scripts/build-windows.mjs
-      env:
-        ARCH: ${{matrix.arch}}
+      - name: Build packages without signing
+        run: node scripts/build-windows.mjs
+        env:
+          ARCH: ${{matrix.arch}}
 
-    - name: Package artifacts
-      run: |
-        mkdir artifact-setup
-        mv dist/*-setup-*.exe artifact-setup/
-        mkdir artifact-portable
-        mv dist/*-portable-*.zip artifact-portable/
+      - name: Package artifacts
+        run: |
+          mkdir artifact-setup
+          mv dist/*-setup-*.exe artifact-setup/
+          mkdir artifact-portable
+          mv dist/*-portable-*.zip artifact-portable/
 
-    - uses: actions/upload-artifact@master
-      name: Upload installer
-      with:
-        name: Windows installer (${{matrix.arch}})
-        path: artifact-setup
+      - uses: actions/upload-artifact@master
+        name: Upload installer
+        with:
+          name: Windows installer (${{matrix.arch}})
+          path: artifact-setup
 
-    - uses: actions/upload-artifact@master
-      name: Upload portable build
-      with:
-        name: Windows portable build (${{matrix.arch}})
-        path: artifact-portable
+      - uses: actions/upload-artifact@master
+        name: Upload portable build
+        with:
+          name: Windows portable build (${{matrix.arch}})
+          path: artifact-portable
+
+
+  Release:
+    runs-on: ubuntu-latest
+    needs:
+      - macOS-Build
+      - Windows-Build
+      - Draft-Release
+    if: >
+      (
+        github.event_name == 'push' &&
+        github.ref_protected || startsWith(github.ref, 'refs/tags/v')
+      )
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: false
+          files: |
+            dist/**/*.dmg
+            dist/**/*.zip
+            dist/**/*.exe
+            dist/**/*.AppImage
+            dist/**/*.deb
+            dist/**/*.rpm
+            dist/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}

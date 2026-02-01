@@ -1,0 +1,68 @@
+name: daily-tagged-and-release
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # UTC 00:00
+  workflow_dispatch:     # 手动触发（方便测试）
+
+concurrency:
+  group: auto-tag
+  cancel-in-progress: false
+
+jobs:
+  Auto-Tag:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Calculate next version
+        id: version
+        shell: bash
+        run: |
+          set -e
+
+          echo "🔍 Finding latest v* tag..."
+          latest=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+          echo "Latest tag: ${latest:-<none>}"
+
+          # 情况 1：仓库从未打过 tag
+          if [ -z "$latest" ]; then
+            echo "🆕 No existing tag, will create v0.0.1"
+            echo "should_tag=true" >> "$GITHUB_OUTPUT"
+            echo "next=v0.0.1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 判断是否有新提交
+          commit_count=$(git rev-list "$latest"..HEAD --count)
+          echo "📦 Commits since last tag: $commit_count"
+
+          if [ "$commit_count" -eq 0 ]; then
+            echo "⏭ No new commits, skip tagging"
+            echo "should_tag=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 计算下一个 patch 版本
+          ver=${latest#v}
+          IFS='.' read -r major minor patch <<< "$ver"
+          next="v$major.$minor.$((patch + 1))"
+
+          echo "➡️ Next tag: $next"
+          echo "should_tag=true" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        if: steps.version.outputs.should_tag == 'true'
+        run: |
+          git tag "${{ steps.version.outputs.next }}"
+          git push origin "${{ steps.version.outputs.next }}"
