@@ -1,22 +1,30 @@
 name: Package-Build
 
+
 on:
   push:
   pull_request:
     types: [opened, synchronize, labeled]
+  schedule:
+    - cron: '0 0 * * *'   # UTC 00:00
+
 
 jobs:
   Lint:
     runs-on: ubuntu-24.04
     if: >
       (
+        github.event_name == 'schedule'
+      ) ||
+      (
         github.event_name == 'push' &&
-        startsWith(github.ref, 'refs/heads/zlx-base-')
+        github.ref_protected || startsWith(github.ref, 'refs/tags')
       ) ||
       (
         github.event_name == 'pull_request' &&
         contains(github.event.pull_request.labels.*.name, 'enhancement')
       )
+    # startsWith(github.ref, 'refs/heads/zlx-base-')
 
     steps:
     - name: Checkout
