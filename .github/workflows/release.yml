@@ -1,19 +1,43 @@
 ---
-name: "tagged-release"
+name: "daily-tagged-and-release"
 
 on:
-  push:
-    tags:
-      - "v*"
+  schedule:
+    - cron: '0 0 * * *'   # UTC 00:00
 
 jobs:
-  tagged-release:
-    name: "Tagged Release"
-    runs-on: "ubuntu-latest"
-
+  Auto-Tag:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
     steps:
-      - uses: "marvinpinto/action-automatic-releases@latest"
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          repo_token: "${{ secrets.PERSONAL_GITHUB_TOKEN }}"
-          prerelease: false
-          draft: true
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Calculate next version
+        id: version
+        run: |
+          # 找到最新 v* tag，没有就从 v0.0.0 开始
+          latest=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+          echo "Latest tag: $latest"
+
+          if [ -z "$latest" ]; then
+            next="v0.0.1"
+          else
+            ver=${latest#v}
+            IFS='.' read -r major minor patch <<< "$ver"
+            next="v$major.$minor.$((patch + 1))"
+          fi
+
+          echo "Next tag: $next"
+          echo "next=$next" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        run: |
+          git tag ${{ steps.version.outputs.next }}
+          git push origin ${{ steps.version.outputs.next }}

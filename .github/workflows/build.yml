@@ -5,8 +5,6 @@ on:
   push:
   pull_request:
     types: [opened, synchronize, labeled]
-  schedule:
-    - cron: '0 0 * * *'   # UTC 00:00
 
 
 jobs:
@@ -174,3 +172,39 @@ jobs:
       with:
         name: Windows portable build (${{matrix.arch}})
         path: artifact-portable
+
+
+  Release:
+    runs-on: ubuntu-latest
+    needs:
+      - macOS-Build
+      - Windows-Build
+    if: >
+      (
+        github.event_name == 'schedule'
+      ) ||
+      (
+        github.event_name == 'push' &&
+        github.ref_protected || startsWith(github.ref, 'refs/tags/v')
+      )
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/**/*.dmg
+            dist/**/*.zip
+            dist/**/*.exe
+            dist/**/*.AppImage
+            dist/**/*.deb
+            dist/**/*.rpm
+            dist/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
