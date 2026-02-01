@@ -22,11 +22,17 @@ jobs:
     # startsWith(github.ref, 'refs/heads/zlx-base-')
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Draft release notes
+        uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+          name: ${{ github.ref_name }}
+          tag: ${{ github.ref_name }}
+          commitish: "zlx-base-4566a9147435bb68324f3f2afb80d504407d544b"
 
   macOS-Build:
     runs-on: macos-15
@@ -42,65 +48,65 @@ jobs:
       RUST_TARGET_TRIPLE: ${{matrix.rust_triple}}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Installing Node
-      uses: actions/setup-node@v4.4.0
-      with:
-        node-version: 22.21.1
+      - name: Installing Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22.21.1
 
-    - run: rustup target add ${{matrix.rust_triple}}
+      - run: rustup target add ${{matrix.rust_triple}}
 
-    - name: Install deps
-      run: |
-        yarn --network-timeout 1000000
-      env:
-        ARCH: ${{matrix.arch}}
+      - name: Install deps
+        run: |
+          yarn --network-timeout 1000000
+        env:
+          ARCH: ${{matrix.arch}}
 
-    - name: Webpack
-      run: |
-        yarn run build
+      - name: Webpack
+        run: |
+          yarn run build
 
-    - name: Prepackage plugins
-      run: |
-        scripts/prepackage-plugins.mjs
-      env:
-        ARCH: ${{matrix.arch}}
+      - name: Prepackage plugins
+        run: |
+          scripts/prepackage-plugins.mjs
+        env:
+          ARCH: ${{matrix.arch}}
 
-    - run: sed -i '' 's/updateInfo = await/\/\/updateInfo = await/g' node_modules/app-builder-lib/out/targets/ArchiveTarget.js
+      - run: sed -i '' 's/updateInfo = await/\/\/updateInfo = await/g' node_modules/app-builder-lib/out/targets/ArchiveTarget.js
 
-    # Work around electron-builder beta bug
-    # - run: ln -s ../../node_modules/electron app/node_modules
+      # Work around electron-builder beta bug
+      # - run: ln -s ../../node_modules/electron app/node_modules
 
-    - name: Build packages without signing
-      run: |
-        scripts/build-macos.mjs
-        find ./dist -name "Tabby.app" | xargs -I{} -t sh -c "codesign --deep --force --sign - {}"
-      env:
-        ARCH: ${{matrix.arch}}
-        # DEBUG: electron-builder,electron-builder:*
+      - name: Build packages without signing
+        run: |
+          scripts/build-macos.mjs
+          find ./dist -name "Tabby.app" | xargs -I{} -t sh -c "codesign --deep --force --sign - {}"
+        env:
+          ARCH: ${{matrix.arch}}
+          # DEBUG: electron-builder,electron-builder:*
 
-    - name: Prepare artifacts for dmg and zip
-      run: |
-        mkdir artifact-dmg
-        mv dist/*.dmg artifact-dmg/
-        mkdir artifact-zip
-        mv dist/*.zip artifact-zip/
+      - name: Prepare artifacts for dmg and zip
+        run: |
+          mkdir artifact-dmg
+          mv dist/*.dmg artifact-dmg/
+          mkdir artifact-zip
+          mv dist/*.zip artifact-zip/
 
-    - uses: actions/upload-artifact@master
-      name: Upload DMG
-      with:
-        name: macOS .dmg (${{matrix.arch}})
-        path: artifact-dmg
+      - uses: actions/upload-artifact@master
+        name: Upload DMG
+        with:
+          name: macOS .dmg (${{matrix.arch}})
+          path: artifact-dmg
 
-    - uses: actions/upload-artifact@master
-      name: Upload ZIP
-      with:
-        name: macOS .zip (${{matrix.arch}})
-        path: artifact-zip
+      - uses: actions/upload-artifact@master
+        name: Upload ZIP
+        with:
+          name: macOS .zip (${{matrix.arch}})
+          path: artifact-zip
 
 
   Windows-Build:
@@ -118,57 +124,57 @@ jobs:
       ARCH: ${{matrix.arch}}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Installing Node
-      uses: actions/setup-node@v4.4.0
-      with:
-        node-version: 22
+      - name: Installing Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22
 
-    - run: npm i -g npx
-    - run: rustup target add ${{matrix.rust_triple}}
+      - run: npm i -g npx
+      - run: rustup target add ${{matrix.rust_triple}}
 
-    - name: Update node-gyp
-      run: |
-        npm install --global node-gyp@10.2.0
-        npm prefix -g | % {npm config set node_gyp "$_\node_modules\node-gyp\bin\node-gyp.js"}
+      - name: Update node-gyp
+        run: |
+          npm install --global node-gyp@10.2.0
+          npm prefix -g | % {npm config set node_gyp "$_\node_modules\node-gyp\bin\node-gyp.js"}
 
-    - name: Build
-      shell: powershell
-      run: |
-        npm i -g yar node-gyp
-        yarn --network-timeout 1000000
-        yarn run build
-        node scripts/prepackage-plugins.mjs
-      env:
-        ARCH: ${{matrix.arch}}
+      - name: Build
+        shell: powershell
+        run: |
+          npm i -g yar node-gyp
+          yarn --network-timeout 1000000
+          yarn run build
+          node scripts/prepackage-plugins.mjs
+        env:
+          ARCH: ${{matrix.arch}}
 
-    - name: Build packages without signing
-      run: node scripts/build-windows.mjs
-      env:
-        ARCH: ${{matrix.arch}}
+      - name: Build packages without signing
+        run: node scripts/build-windows.mjs
+        env:
+          ARCH: ${{matrix.arch}}
 
-    - name: Package artifacts
-      run: |
-        mkdir artifact-setup
-        mv dist/*-setup-*.exe artifact-setup/
-        mkdir artifact-portable
-        mv dist/*-portable-*.zip artifact-portable/
+      - name: Package artifacts
+        run: |
+          mkdir artifact-setup
+          mv dist/*-setup-*.exe artifact-setup/
+          mkdir artifact-portable
+          mv dist/*-portable-*.zip artifact-portable/
 
-    - uses: actions/upload-artifact@master
-      name: Upload installer
-      with:
-        name: Windows installer (${{matrix.arch}})
-        path: artifact-setup
+      - uses: actions/upload-artifact@master
+        name: Upload installer
+        with:
+          name: Windows installer (${{matrix.arch}})
+          path: artifact-setup
 
-    - uses: actions/upload-artifact@master
-      name: Upload portable build
-      with:
-        name: Windows portable build (${{matrix.arch}})
-        path: artifact-portable
+      - uses: actions/upload-artifact@master
+        name: Upload portable build
+        with:
+          name: Windows portable build (${{matrix.arch}})
+          path: artifact-portable
 
 
   Release:
@@ -195,6 +201,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
           name: ${{ github.ref_name }}
           tag: ${{ github.ref_name }}
+          commitish: "zlx-base-4566a9147435bb68324f3f2afb80d504407d544b"
 
       - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2
