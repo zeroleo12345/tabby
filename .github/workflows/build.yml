@@ -32,7 +32,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
           name: ${{ github.ref_name }}
           tag: ${{ github.ref_name }}
-          commitish: "zlx-base-4566a9147435bb68324f3f2afb80d504407d544b"
+          initial-commits-since: "2025-12-26T00:00:00Z"
 
   macOS-Build:
     runs-on: macos-15
