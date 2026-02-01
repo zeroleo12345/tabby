@@ -196,6 +196,7 @@ jobs:
     needs:
       - macOS-Build
       - Windows-Build
+      - Draft-Release
     if: >
       (
         github.event_name == 'push' &&
