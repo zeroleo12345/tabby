@@ -1,5 +1,5 @@
-name-template: 'Release $RESOLVED_VERSION'
-tag-template: '$RESOLVED_VERSION'
+name-template: '$GITHUB_REF_NAME'
+tag-template: '$GITHUB_REF_NAME'
 
 categories:
   - title: 🚀 Features

@@ -12,9 +12,6 @@ jobs:
     runs-on: ubuntu-24.04
     if: >
       (
-        github.event_name == 'schedule'
-      ) ||
-      (
         github.event_name == 'push' &&
         github.ref_protected || startsWith(github.ref, 'refs/tags')
       ) ||
@@ -181,9 +178,6 @@ jobs:
       - Windows-Build
     if: >
       (
-        github.event_name == 'schedule'
-      ) ||
-      (
         github.event_name == 'push' &&
         github.ref_protected || startsWith(github.ref, 'refs/tags/v')
       )
@@ -199,6 +193,7 @@ jobs:
         uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
 
       - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2
