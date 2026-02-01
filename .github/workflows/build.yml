@@ -28,10 +28,12 @@ jobs:
           fetch-depth: 0
       - name: Draft release notes
         uses: release-drafter/release-drafter@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+        with:
           name: ${{ github.ref_name }}
           tag: ${{ github.ref_name }}
+          initial-commits-since: "2025-12-26T00:00:00Z"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
 
   macOS-Build:
     runs-on: macos-15
@@ -196,10 +198,12 @@ jobs:
 
       - name: Draft release notes
         uses: release-drafter/release-drafter@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+        with:
           name: ${{ github.ref_name }}
           tag: ${{ github.ref_name }}
+          initial-commits-since: "2025-12-26T00:00:00Z"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
 
       - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2

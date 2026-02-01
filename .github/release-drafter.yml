@@ -1,8 +1,6 @@
 name-template: 'Release $RESOLVED_VERSION'
 tag-template: '$RESOLVED_VERSION'
 
-initial-commits-since: "2025-12-26T00:00:00Z"
-
 categories:
   - title: 🚀 Features
     labels:
