@@ -333,6 +333,7 @@ export class XTermFrontend extends Frontend {
     }
 
     async write (data: string): Promise<void> {
+        console.log(`111 [xterm][ac-echo] length: ${data.length}, sample: ${data.slice(0, 200)}`)
         await this.flowControl.write(data)
     }
 
