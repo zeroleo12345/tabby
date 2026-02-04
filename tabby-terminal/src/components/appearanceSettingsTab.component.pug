@@ -13,7 +13,7 @@ h3.mb-3(translate) Appearance
         input.form-control.font-size-input(
             type='number',
             max='48',
-            [(ngModel)]='config.store.terminal.fontSize',
+            [(ngModel)]='config.store.terminal.platformFontSize[configPlatform()]',
             (ngModelChange)='fixFontSize(); config.save()',
         )
 
