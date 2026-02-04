@@ -104,7 +104,7 @@ export class HotkeysService {
     propagationKeyEventHandler (eventName: string, nativeEvent: KeyboardEvent): boolean {
         const isMatch = this.pushKeyEvent(eventName, nativeEvent)
         if (isMatch) {
-            // console.log("preventDefault and stopPropagation:", nativeEvent)
+            // console.log(`111 match hotkey. preventDefault and stopPropagation:`, nativeEvent)
             nativeEvent.preventDefault()
             nativeEvent.stopPropagation()
             return false

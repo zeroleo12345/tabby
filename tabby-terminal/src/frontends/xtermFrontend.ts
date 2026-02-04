@@ -431,7 +431,7 @@ export class XTermFrontend extends Frontend {
         this.xterm.options.fontWeightBold = config.terminal.fontWeightBold
         this.xterm.options.minimumContrastRatio = config.terminal.minimumContrastRatio
         this.xterm.options.scrollOnEraseInDisplay = true
-        this.configuredFontSize = config.terminal.fontSize
+        this.configuredFontSize = config.terminal.platformFontSize[this.hostApp.platform]
         this.configuredLinePadding = config.terminal.linePadding
         this.setFontSize()
 

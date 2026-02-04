@@ -1,5 +1,5 @@
 import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core'
-import { BaseComponent, ConfigService, getCSSFontFamily } from 'tabby-core'
+import { BaseComponent, ConfigService, getCSSFontFamily, Platform } from 'tabby-core'
 import { TerminalColorScheme } from '../api/interfaces'
 
 /** @hidden */
@@ -25,5 +25,13 @@ export class ColorSchemePreviewComponent extends BaseComponent {
 
     getPreviewFontFamily (): string {
         return getCSSFontFamily(this.config.store)
+    }
+
+    configPlatform (): Platform {
+        return {
+            win32: Platform.Windows,
+            darwin: Platform.macOS,
+            linux: Platform.Linux,
+        }[process.platform]
     }
 }

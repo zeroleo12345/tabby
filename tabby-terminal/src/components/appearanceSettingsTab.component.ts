@@ -3,7 +3,7 @@ import { Observable, debounceTime, distinctUntilChanged, map } from 'rxjs'
 import { debounce } from 'utils-decorators/dist/esm/debounce/debounce'
 
 import { Component } from '@angular/core'
-import { ConfigService, getCSSFontFamily, PlatformService, ThemesService } from 'tabby-core'
+import { ConfigService, getCSSFontFamily, Platform, PlatformService, ThemesService } from 'tabby-core'
 
 /** @hidden */
 @Component({
@@ -45,12 +45,25 @@ export class AppearanceSettingsTabComponent {
     }
 
     fixFontSize () {
-        this.config.store.terminal.fontSize = Math.min(
+        const platform: string = {
+            win32: Platform.Windows,
+            darwin: Platform.macOS,
+            linux: Platform.Linux,
+        }[process.platform]
+        this.config.store.terminal.platformFontSize[platform] = Math.min(
             50,
             Math.max(
                 5,
-                this.config.store.terminal.fontSize,
+                this.config.store.terminal.platformFontSize[this.configPlatform()],
             ),
         )
+    }
+
+    configPlatform (): Platform {
+        return {
+            win32: Platform.Windows,
+            darwin: Platform.macOS,
+            linux: Platform.Linux,
+        }[process.platform]
     }
 }

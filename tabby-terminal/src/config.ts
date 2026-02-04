@@ -10,6 +10,11 @@ export class TerminalConfigProvider extends ConfigProvider {
         terminal: {
             frontend: 'xterm-webgl',
             fontSize: 14,
+            platformFontSize: {
+                Linux: 13,
+                macOS: 13,
+                Windows: 13,
+            },
             fontWeight: 400,
             fontWeightBold: 700,
             fallbackFont: null,

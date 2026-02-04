@@ -1,6 +1,6 @@
 .preview(
     [style.font-family]='getPreviewFontFamily()',
-    [style.font-size]='(fontPreview ? config.store.terminal.fontSize : 11) + "px"',
+    [style.font-size]='(fontPreview ? config.store.terminal.platformFontSize[configPlatform()] : 11) + "px"',
     [style.font-weight]='config.store.terminal.fontWeight',
     [style.background-color]='scheme.background',
     [style.color]='scheme.foreground',
