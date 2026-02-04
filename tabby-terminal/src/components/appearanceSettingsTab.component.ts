@@ -50,13 +50,11 @@ export class AppearanceSettingsTabComponent {
             darwin: Platform.macOS,
             linux: Platform.Linux,
         }[process.platform]
-        const fontSize = this.config.store.terminal.platformFontSize[this.configPlatform()] ?? 16
-        console.log(`111 fontSize: ${fontSize}`)
         this.config.store.terminal.platformFontSize[platform] = Math.min(
             50,
             Math.max(
                 5,
-                fontSize,
+                this.config.store.terminal.platformFontSize[this.configPlatform()],
             ),
         )
     }
