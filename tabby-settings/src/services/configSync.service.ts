@@ -177,7 +177,7 @@ export class ConfigSyncService {
         await this.config.save()
         this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
         this.lastRemoteChange.digest = this.hashContent(remoteConfig.content)
-        console.log(`111 remote digest:`, this.lastRemoteChange.digest)
+        console.log(`111 sync remote config, remote digest: ${this.lastRemoteChange.digest}`)
     }
 
     private async request (method: 'GET'|'POST'|'PATCH'|'DELETE', url: string, params = {}) {
