@@ -147,10 +147,9 @@ export class ConfigSyncService {
                     this.logger.debug(`Remote config unchanged, skip update config`)
                 }
             } else {
+                this.logger.debug('Config replaced')
                 await this.writeConfigDataFromSync(remoteConfig)
             }
-
-            this.logger.debug('Config downloaded')
         } catch (error) {
             this.logger.error('Download failed:', error)
             throw error
@@ -175,7 +174,7 @@ export class ConfigSyncService {
 
     private async writeConfigDataFromSync (config: Config) {
         const remoteData = yaml.load(config.content) as any
-        remoteData.configSync = this.config.store.configSync
+        remoteData.configSync = JSON.parse(JSON.stringify(this.config.store.configSync))
         console.log(`111 remoteData.configSync:`, remoteData.configSync)
         await this.platform.saveConfig(yaml.dump(remoteData))
         await this.config.load()
