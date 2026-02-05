@@ -34,7 +34,7 @@ export const defaultAlgorithms = {
         'aes256-gcm@openssh.com',
         'aes256-ctr',
         'aes192-ctr',
-        'aes128-ctr',
+        // 'aes128-ctr',
     ],
     [SSHAlgorithmType.HMAC]: [
         'hmac-sha2-512-etm@openssh.com',
