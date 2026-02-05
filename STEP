@@ -34,3 +34,9 @@ System settings... -> Privacy & Security -> "Tabby" was blocked to protect your 
 
 # download from CI
 xattr -r -d com.apple.quarantine Tabby.app
+
+
+# config path
+- vault password: ~/Library/Application\ Support/tabby/passphrase.json
+
+- config path: ~/Library/Application\ Support/tabby/config.yaml
