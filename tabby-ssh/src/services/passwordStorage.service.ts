@@ -44,10 +44,7 @@ export class PasswordStorageService {
         const account = username ?? profile.options.user
         if (this.vault.isEnabled()) {
             const key = this.getVaultKeyForConnection(profile, account)
-            console.log(`111 loadPassword user: ${key.user}, host: ${key.host}, key:`, key)
-            const password = (await this.vault.getSecret(VAULT_SECRET_TYPE_PASSWORD, key))?.value ?? null
-            console.log(`111 loadPassword password: ${password}`)
-            return password
+            return (await this.vault.getSecret(VAULT_SECRET_TYPE_PASSWORD, key))?.value ?? null
         } else {
             if (!account) {
                 return null
