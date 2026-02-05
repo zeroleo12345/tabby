@@ -93,14 +93,14 @@ export class ConfigSyncService {
             return
         }
         try {
-            const data = await this.readConfigDataForSync()
-            const remoteData = yaml.load((await this.getConfig(this.config.store.configSync.configID)).content) as any
-            for (const part of OPTIONAL_CONFIG_PARTS) {
-                if (!this.config.store.configSync.parts[part]) {
-                    data[part] = remoteData[part]
-                }
-            }
-            const content = yaml.dump(data)
+            const localData = await this.readConfigDataForSync()
+            // const remoteData = yaml.load((await this.getConfig(this.config.store.configSync.configID)).content) as any
+            // for (const part of OPTIONAL_CONFIG_PARTS) {
+            //     if (!this.config.store.configSync.parts[part]) {
+            //         localData[part] = remoteData[part]
+            //     }
+            // }
+            const content = yaml.dump(localData)
             // TODO
             const result = await this.updateConfig(this.config.store.configSync.configID, {
                 content,
@@ -122,16 +122,17 @@ export class ConfigSyncService {
             const config = await this.getConfig(this.config.store.configSync.configID)
             const remoteData = yaml.load(config.content) as any
 
-            const localData = yaml.load(this.config.readRaw()) as any
-            remoteData.configSync = localData.configSync
+            // const localData = yaml.load(this.config.readRaw()) as any
+            // remoteData.configSync = localData.configSync
 
-            if (!remoteData.encrypted) {
-                for (const part of OPTIONAL_CONFIG_PARTS) {
-                    if (!this.config.store.configSync.parts[part]) {
-                        remoteData[part] = localData[part]
-                    }
-                }
-            }
+            // if (!remoteData.encrypted) {
+            //     for (const part of OPTIONAL_CONFIG_PARTS) {
+            //         if (!this.config.store.configSync.parts[part]) {
+            //             // 原则上使用云端配置, 但部分设置(hotkeys, appearance, vault)可不同步到云端, 则使用local
+            //             remoteData[part] = localData[part]
+            //         }
+            //     }
+            // }
 
             await this.writeConfigDataFromSync(remoteData)
             this.logger.debug('Config downloaded')
