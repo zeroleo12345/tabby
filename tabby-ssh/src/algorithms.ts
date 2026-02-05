@@ -14,6 +14,8 @@ export const defaultAlgorithms = {
         'mlkem768x25519-sha256',
         'curve25519-sha256',
         'curve25519-sha256@libssh.org',
+        'diffie-hellman-group1-sha1',
+        'diffie-hellman-group14-sha1',
         'diffie-hellman-group16-sha512',
         'diffie-hellman-group14-sha256',
         'ext-info-c',
@@ -35,6 +37,7 @@ export const defaultAlgorithms = {
         'aes256-ctr',
         'aes192-ctr',
         // 'aes128-ctr',
+        'aes128-cbc',
     ],
     [SSHAlgorithmType.HMAC]: [
         'hmac-sha2-512-etm@openssh.com',
