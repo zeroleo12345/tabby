@@ -32,7 +32,7 @@ export class SettingsTabComponent extends BaseTabComponent {
     @Input() activeTab: string
     Platform = Platform
     configDefaults: any
-    configFile: string
+    configContent: string
     isShellIntegrationInstalled = false
     checkingForUpdate = false
     updateAvailable = false
@@ -62,7 +62,7 @@ export class SettingsTabComponent extends BaseTabComponent {
         this.configDefaults = yaml.dump(config.getDefaults())
 
         const onConfigChange = () => {
-            this.configFile = config.readRaw()
+            this.configContent = config.readRaw()
             this.padWindowControls = hostApp.platform === Platform.macOS
                 && config.store.appearance.tabsLocation !== 'top'
         }
@@ -102,7 +102,7 @@ export class SettingsTabComponent extends BaseTabComponent {
 
     saveConfigFile () {
         if (this.isConfigFileValid()) {
-            this.config.writeRaw(this.configFile)
+            this.config.writeRaw(this.configContent)
         }
     }
 
@@ -112,7 +112,7 @@ export class SettingsTabComponent extends BaseTabComponent {
 
     isConfigFileValid () {
         try {
-            yaml.load(this.configFile)
+            yaml.load(this.configContent)
             return true
         } catch {
             return false
