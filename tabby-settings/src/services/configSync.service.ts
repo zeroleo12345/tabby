@@ -120,7 +120,6 @@ export class ConfigSyncService {
         }
         try {
             const remoteConfig = await this.getConfig(id)
-            const remoteData = yaml.load(remoteConfig.content) as any
 
             // const localData = yaml.load(this.config.readRaw()) as any
             // remoteData.configSync = localData.configSync
@@ -136,14 +135,13 @@ export class ConfigSyncService {
 
             if (id === this.config.store.configSync.configID) {
                 if (new Date(remoteConfig.modified_at) > this.lastRemoteChange.modified_at) {
-                    this.logger.info(`Remote config changed ${remoteConfig.modified_at}, downloading`)
-                    await this.writeConfigDataFromSync(remoteData)
+                    this.logger.info(`Remote config changed at ${remoteConfig.modified_at}, syncing`)
+                    await this.writeConfigDataFromSync(remoteConfig)
                 }
             } else {
-                await this.writeConfigDataFromSync(remoteData)
+                await this.writeConfigDataFromSync(remoteConfig)
             }
 
-            this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
             this.logger.debug('Config downloaded')
         } catch (error) {
             this.logger.error('Download failed:', error)
@@ -167,10 +165,12 @@ export class ConfigSyncService {
         return data
     }
 
-    private async writeConfigDataFromSync (data: any) {
+    private async writeConfigDataFromSync (config: Config) {
+        const data = yaml.load(config.content) as any
         await this.platform.saveConfig(yaml.dump(data))
         await this.config.load()
         await this.config.save()
+        this.lastRemoteChange.modified_at = new Date(config.modified_at)
     }
 
     private async request (method: 'GET'|'POST'|'PATCH'|'DELETE', url: string, params = {}) {
