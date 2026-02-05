@@ -422,8 +422,21 @@ export class SSHSession {
         if (!this.authUsername) {
             const modal = this.ngbModal.open(PromptModalComponent)
             modal.componentInstance.prompt = `Username for ${this.profile.options.host}`
-            const result = await modal.result.catch(() => null)
-            this.authUsername = result?.value ?? null
+            try {
+                const result = await modal.result.catch(() => null)
+                this.authUsername = result?.value ?? null
+            } catch {
+                this.authUsername = 'root'
+            }
+        }
+
+        if (this.authUsername?.startsWith('$')) {
+            try {
+                const result = process.env[this.authUsername.slice(1)]
+                this.authUsername = result ?? this.authUsername
+            } catch {
+                this.authUsername = 'root'
+            }
         }
 
         await this.populateStoredPasswordsForResolvedUsername()
