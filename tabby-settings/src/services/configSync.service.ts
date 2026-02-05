@@ -101,7 +101,7 @@ export class ConfigSyncService {
             //     }
             // }
             const content = yaml.dump(localData)
-            // TODO 比较 content 的 cksum 或者 sha1 与 this.lastRemoteChange.cksum 的值
+            // TODO 比较 content 的 cksum 或者 sha1 与 this.lastRemoteChange.cksum 的值, 如果相等, 直接 return
             const result = await this.updateConfig(this.config.store.configSync.configID, {
                 content,
                 last_used_with_version: this.platform.getAppVersion(),
