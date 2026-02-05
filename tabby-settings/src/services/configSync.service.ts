@@ -138,7 +138,7 @@ export class ConfigSyncService {
             //     }
             // }
 
-            if (id === this.config.store.configSync.configID) {
+            if (remoteConfig.id === this.config.store.configSync.configID) {
                 if (new Date(remoteConfig.modified_at) > this.lastRemoteChange.modified_at) {
                     this.logger.debug(`Remote config changed at ${remoteConfig.modified_at}, syncing`)
                     await this.writeConfigDataFromSync(remoteConfig)
@@ -172,12 +172,18 @@ export class ConfigSyncService {
     }
 
     private async writeConfigDataFromSync (remoteConfig: Config) {
+        // TODO
+        this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
+        const digest = this.hashContent(remoteConfig.content)
+        if (this.lastRemoteChange.digest === digest) {
+            this.logger.info('Config unchanged, skipping sync')
+            return
+        }
+        console.log(`111 sync remote config, remote digest: ${digest}, local digest: ${this.lastRemoteChange.digest}`)
+        this.lastRemoteChange.digest = digest
         await this.platform.saveConfig(remoteConfig.content)
         await this.config.load()
         await this.config.save()
-        this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
-        this.lastRemoteChange.digest = this.hashContent(remoteConfig.content)
-        console.log(`111 sync remote config, remote digest: ${this.lastRemoteChange.digest}`)
     }
 
     private async request (method: 'GET'|'POST'|'PATCH'|'DELETE', url: string, params = {}) {
