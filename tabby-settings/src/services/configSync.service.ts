@@ -112,7 +112,7 @@ export class ConfigSyncService {
             })
             this.lastRemoteChange.modified_at = new Date(result.modified_at)
             this.lastRemoteChange.digest = digest
-            this.logger.info('Config uploaded')
+            this.logger.info(`Config uploaded, remote digest: ${this.lastRemoteChange.digest}, local digest: ${digest}`)
         } catch (error) {
             this.logger.error('Upload failed:', error)
             throw error
