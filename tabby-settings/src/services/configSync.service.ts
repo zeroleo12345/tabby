@@ -104,7 +104,7 @@ export class ConfigSyncService {
             const content = yaml.dump(localData)
             const digest = this.hashContent(content)
             if (this.lastRemoteChange.digest === digest) {
-                this.logger.info('Config unchanged, skipping upload')
+                this.logger.debug('Config unchanged, skipping upload')
                 return
             }
             const result = await this.updateConfig(this.config.store.configSync.configID, {
