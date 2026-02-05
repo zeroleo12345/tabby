@@ -416,6 +416,17 @@ export class SSHSession {
             }
         })
 
+        // this.previouslyDisconnected = false
+        // this.ssh.disconnect$.subscribe(() => {
+        //     if (!this.previouslyDisconnected) {
+        //         this.previouslyDisconnected = true
+        //         // Let service messages drain
+        //         setTimeout(() => {
+        //             this.destroy()
+        //         })
+        //     }
+        // })
+
         // Authentication
 
         this.authUsername ??= this.profile.options.user
