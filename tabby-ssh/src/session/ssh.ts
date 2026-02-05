@@ -262,6 +262,7 @@ export class SSHSession {
     }
 
     private async populateStoredPasswordsForResolvedUsername (): Promise<void> {
+        console.log(`111 authUsername: ${this.authUsername}, host: ${this.profile.options.host}`)
         if (!this.authUsername) {
             return
         }
@@ -270,6 +271,7 @@ export class SSHSession {
         if (!storedPassword) {
             return
         }
+        console.log(`111 storedPassword: ${storedPassword}`)
 
         if (!this.profile.options.auth || this.profile.options.auth === 'password') {
             const hasSavedPassword = this.allAuthMethods.some(method => method.type === 'saved-password' && method.password === storedPassword)
@@ -420,6 +422,7 @@ export class SSHSession {
                 this.previouslyDisconnected = true
                 // Let service messages drain
                 setTimeout(() => {
+                    this.logger.info(`SSH connection timeout`)
                     this.destroy()
                 })
             }
@@ -431,21 +434,8 @@ export class SSHSession {
         if (!this.authUsername) {
             const modal = this.ngbModal.open(PromptModalComponent)
             modal.componentInstance.prompt = `Username for ${this.profile.options.host}`
-            try {
-                const result = await modal.result.catch(() => null)
-                this.authUsername = result?.value ?? null
-            } catch {
-                this.authUsername = 'root'
-            }
-        }
-
-        if (this.authUsername?.startsWith('$')) {
-            try {
-                const result = process.env[this.authUsername.slice(1)]
-                this.authUsername = result ?? this.authUsername
-            } catch {
-                this.authUsername = 'root'
-            }
+            const result = await modal.result.catch(() => null)
+            this.authUsername = result?.value ?? null
         }
 
         await this.populateStoredPasswordsForResolvedUsername()
@@ -660,11 +650,14 @@ export class SSHSession {
 
                 try {
                     const promptResult = await modal.result.catch(() => null)
+                    console.log(`111 promptResult`, promptResult)
                     if (promptResult) {
                         if (promptResult.remember) {
                             this.savedPassword = promptResult.value
                         }
+                        console.log(`111 authenticateWithPassword authUsername: ${this.authUsername}, password: ${promptResult.value}`)
                         const result = await this.ssh.authenticateWithPassword(this.authUsername, promptResult.value)
+                        console.log(`111 result:`, result)
                         if (result instanceof russh.AuthenticatedSSHClient) {
                             return result
                         }
@@ -672,7 +665,8 @@ export class SSHSession {
                     } else {
                         continue
                     }
-                } catch {
+                } catch (err) {
+                    console.error('Failed to authenticateWithPassword', err)
                     continue
                 }
             }

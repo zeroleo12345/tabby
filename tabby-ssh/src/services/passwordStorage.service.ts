@@ -13,6 +13,7 @@ export class PasswordStorageService {
     async savePassword (profile: SSHProfile, password: string, username?: string): Promise<void> {
         const account = username ?? profile.options.user
         if (this.vault.isEnabled()) {
+            console.log(`111 savePassword`)
             const key = this.getVaultKeyForConnection(profile, account)
             this.vault.addSecret({ type: VAULT_SECRET_TYPE_PASSWORD, key, value: password })
         } else {
@@ -27,6 +28,7 @@ export class PasswordStorageService {
     async deletePassword (profile: SSHProfile, username?: string): Promise<void> {
         const account = username ?? profile.options.user
         if (this.vault.isEnabled()) {
+            console.log(`111 deletePassword`)
             const key = this.getVaultKeyForConnection(profile, account)
             this.vault.removeSecret(VAULT_SECRET_TYPE_PASSWORD, key)
         } else {
@@ -42,7 +44,10 @@ export class PasswordStorageService {
         const account = username ?? profile.options.user
         if (this.vault.isEnabled()) {
             const key = this.getVaultKeyForConnection(profile, account)
-            return (await this.vault.getSecret(VAULT_SECRET_TYPE_PASSWORD, key))?.value ?? null
+            console.log(`111 loadPassword user: ${key.user}, host: ${key.host}, key:`, key)
+            const password = (await this.vault.getSecret(VAULT_SECRET_TYPE_PASSWORD, key))?.value ?? null
+            console.log(`111 loadPassword password: ${password}`)
+            return password
         } else {
             if (!account) {
                 return null
