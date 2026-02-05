@@ -416,18 +416,6 @@ export class SSHSession {
             }
         })
 
-        this.previouslyDisconnected = false
-        this.ssh.disconnect$.subscribe(() => {
-            if (!this.previouslyDisconnected) {
-                this.previouslyDisconnected = true
-                // Let service messages drain
-                setTimeout(() => {
-                    this.logger.info(`SSH connection timeout`)
-                    this.destroy()
-                })
-            }
-        })
-
         // Authentication
 
         this.authUsername ??= this.profile.options.user
@@ -634,6 +622,7 @@ export class SSHSession {
 
             remainingMethods = remainingMethods.filter(x => x !== method)
 
+            console.log(`111 handleAuth method.type: ${method.type}`)
             if (method.type === 'saved-password') {
                 this.emitServiceMessage(this.translate.instant('Using saved password'))
                 const result = await this.ssh.authenticateWithPassword(this.authUsername, method.password)
