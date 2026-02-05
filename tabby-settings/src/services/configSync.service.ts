@@ -103,7 +103,7 @@ export class ConfigSyncService {
                 last_used_with_version: this.platform.getAppVersion(),
             })
             this.lastRemoteChange = new Date(result.modified_at)
-            this.logger.debug('Config uploaded')
+            this.logger.info('Config uploaded')
         } catch (error) {
             this.logger.error('Upload failed:', error)
             throw error
