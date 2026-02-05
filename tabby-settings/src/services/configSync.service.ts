@@ -171,7 +171,7 @@ export class ConfigSyncService {
         await this.config.load()
         await this.config.save()
         this.lastRemoteChange.modified_at = new Date(config.modified_at)
-        // TOD 计算字符串字段 data 的 md5 或者 sha1, 存入 this.lastRemoteChange.cksum
+        // TODO 计算字符串字段 data 的 md5 或者 sha1, 存入 this.lastRemoteChange.cksum
         this.lastRemoteChange.cksum = cksum(data)
     }
 
