@@ -1,5 +1,6 @@
 import * as yaml from 'js-yaml'
 import axios from 'axios'
+import * as crypto from 'crypto'
 import { Injectable } from '@angular/core'
 import { ConfigService, HostAppService, Logger, LogService, Platform, PlatformService } from 'tabby-core'
 
@@ -23,7 +24,7 @@ export class ConfigSyncService {
     private logger: Logger
     private lastRemoteChange = {
         modified_at: new Date(0),
-        cksum: null,
+        digest: '',
     }
 
     constructor (
@@ -101,12 +102,17 @@ export class ConfigSyncService {
             //     }
             // }
             const content = yaml.dump(localData)
-            // TODO 比较 content 的 cksum 或者 sha1 与 this.lastRemoteChange.cksum 的值, 如果相等, 直接 return
+            const digest = this.hashContent(content)
+            if (this.lastRemoteChange.digest === digest) {
+                this.logger.info('Config unchanged, skipping upload')
+                return
+            }
             const result = await this.updateConfig(this.config.store.configSync.configID, {
                 content,
                 last_used_with_version: this.platform.getAppVersion(),
             })
             this.lastRemoteChange.modified_at = new Date(result.modified_at)
+            this.lastRemoteChange.digest = digest
             this.logger.info('Config uploaded')
         } catch (error) {
             this.logger.error('Upload failed:', error)
@@ -171,8 +177,7 @@ export class ConfigSyncService {
         await this.config.load()
         await this.config.save()
         this.lastRemoteChange.modified_at = new Date(config.modified_at)
-        // TODO 计算字符串字段 data 的 md5 或者 sha1, 存入 this.lastRemoteChange.cksum
-        this.lastRemoteChange.cksum = cksum(data)
+        this.lastRemoteChange.digest = this.hashContent(config.content)
     }
 
     private async request (method: 'GET'|'POST'|'PATCH'|'DELETE', url: string, params = {}) {
@@ -209,5 +214,9 @@ export class ConfigSyncService {
             }
             await new Promise(resolve => setTimeout(resolve, 60000))
         }
+    }
+
+    private hashContent (content: string): string {
+        return crypto.createHash('sha1').update(content, 'utf8').digest('hex')
     }
 }
