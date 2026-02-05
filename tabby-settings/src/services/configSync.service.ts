@@ -141,8 +141,10 @@ export class ConfigSyncService {
 
             if (id === this.config.store.configSync.configID) {
                 if (new Date(remoteConfig.modified_at) > this.lastRemoteChange.modified_at) {
-                    this.logger.info(`Remote config changed at ${remoteConfig.modified_at}, syncing`)
+                    this.logger.debug(`Remote config changed at ${remoteConfig.modified_at}, syncing`)
                     await this.writeConfigDataFromSync(remoteConfig)
+                } else {
+                    this.logger.debug(`Remote config unchanged, skip update config`)
                 }
             } else {
                 await this.writeConfigDataFromSync(remoteConfig)
@@ -172,8 +174,10 @@ export class ConfigSyncService {
     }
 
     private async writeConfigDataFromSync (config: Config) {
-        const data = yaml.load(config.content) as any
-        await this.platform.saveConfig(yaml.dump(data))
+        const remoteData = yaml.load(config.content) as any
+        remoteData.configSync = this.config.store.configSync
+        console.log(`111 remoteData.configSync:`, remoteData.configSync)
+        await this.platform.saveConfig(yaml.dump(remoteData))
         await this.config.load()
         await this.config.save()
         this.lastRemoteChange.modified_at = new Date(config.modified_at)
