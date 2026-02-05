@@ -94,21 +94,20 @@ export class ConfigSyncService {
             return
         }
         try {
-            const localData = await this.readConfigDataForSync()
+            const localContent = await this.platform.loadConfig()
             // const remoteData = yaml.load((await this.getConfig(this.config.store.configSync.configID)).content) as any
             // for (const part of OPTIONAL_CONFIG_PARTS) {
             //     if (!this.config.store.configSync.parts[part]) {
             //         localData[part] = remoteData[part]
             //     }
             // }
-            const content = yaml.dump(localData)
-            const digest = this.hashContent(content)
+            const digest = this.hashContent(localContent)
             if (this.lastRemoteChange.digest === digest) {
-                this.logger.debug('Config unchanged, skipping upload')
+                this.logger.debug('111 Config unchanged, skipping upload')
                 return
             }
             const result = await this.updateConfig(this.config.store.configSync.configID, {
-                content,
+                content: localContent,
                 last_used_with_version: this.platform.getAppVersion(),
             })
             this.lastRemoteChange.modified_at = new Date(result.modified_at)
@@ -172,15 +171,13 @@ export class ConfigSyncService {
         return data
     }
 
-    private async writeConfigDataFromSync (config: Config) {
-        const remoteData = yaml.load(config.content) as any
-        remoteData.configSync = JSON.parse(JSON.stringify(this.config.store.configSync))
-        console.log(`111 remoteData.configSync:`, remoteData.configSync)
-        await this.platform.saveConfig(yaml.dump(remoteData))
+    private async writeConfigDataFromSync (remoteConfig: Config) {
+        await this.platform.saveConfig(remoteConfig.content)
         await this.config.load()
         await this.config.save()
-        this.lastRemoteChange.modified_at = new Date(config.modified_at)
-        this.lastRemoteChange.digest = this.hashContent(config.content)
+        this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
+        this.lastRemoteChange.digest = this.hashContent(remoteConfig.content)
+        console.log(`111 remote digest:`, this.lastRemoteChange.digest)
     }
 
     private async request (method: 'GET'|'POST'|'PATCH'|'DELETE', url: string, params = {}) {
