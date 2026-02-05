@@ -90,9 +90,7 @@ async function decryptVault (vault: StoredVault, passphrase: string): Promise<Va
 
     const decipher = crypto.createDecipheriv(CRYPT_ALG, key, iv)
     const plaintext = decipher.update(encrypted, undefined, 'utf-8') + decipher.final('utf-8')
-    const jsonText = JSON.parse(plaintext)
-    // console.log(`111 decryptVault:`, jsonText)
-    return migrateVaultContent(jsonText)
+    return migrateVaultContent(JSON.parse(plaintext))
 }
 
 export const VAULT_SECRET_TYPE_FILE = 'file'
