@@ -147,7 +147,7 @@ export class ConfigSyncService {
                     this.logger.debug(`Remote config unchanged, skip update config`)
                 }
             } else {
-                this.logger.debug('Config replaced')
+                this.logger.debug('Config replacing')
                 await this.writeConfigDataFromSync(remoteConfig)
             }
         } catch (error) {
