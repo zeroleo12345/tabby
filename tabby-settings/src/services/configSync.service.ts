@@ -188,7 +188,7 @@ export class ConfigSyncService {
                 if (this.isEnabled() && this.config.store.configSync.auto) {
                     const cfg = await this.getConfig(this.config.store.configSync.configID)
                     if (new Date(cfg.modified_at) > this.lastRemoteChange) {
-                        this.logger.info('Remote config changed, downloading')
+                        this.logger.info(`Remote config changed ${cfg.modified_at}, downloading`)
                         this.download()
                         this.lastRemoteChange = new Date(cfg.modified_at)
                     }
