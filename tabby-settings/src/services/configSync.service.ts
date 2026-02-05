@@ -114,13 +114,13 @@ export class ConfigSyncService {
         }
     }
 
-    async download (): Promise<void> {
+    async download (id: number): Promise<void> {
         if (!this.isEnabled()) {
             return
         }
         try {
-            const config = await this.getConfig(this.config.store.configSync.configID)
-            const remoteData = yaml.load(config.content) as any
+            const remoteConfig = await this.getConfig(id)
+            const remoteData = yaml.load(remoteConfig.content) as any
 
             // const localData = yaml.load(this.config.readRaw()) as any
             // remoteData.configSync = localData.configSync
@@ -134,7 +134,16 @@ export class ConfigSyncService {
             //     }
             // }
 
-            await this.writeConfigDataFromSync(remoteData)
+            if (id === this.config.store.configSync.configID) {
+                if (new Date(remoteConfig.modified_at) > this.lastRemoteChange.modified_at) {
+                    this.logger.info(`Remote config changed ${remoteConfig.modified_at}, downloading`)
+                    await this.writeConfigDataFromSync(remoteData)
+                }
+            } else {
+                await this.writeConfigDataFromSync(remoteData)
+            }
+
+            this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
             this.logger.debug('Config downloaded')
         } catch (error) {
             this.logger.error('Download failed:', error)
@@ -191,12 +200,7 @@ export class ConfigSyncService {
         while (true) {
             try {
                 if (this.isEnabled() && this.config.store.configSync.auto) {
-                    const cfg = await this.getConfig(this.config.store.configSync.configID)
-                    if (new Date(cfg.modified_at) > this.lastRemoteChange.modified_at) {
-                        this.logger.info(`Remote config changed ${cfg.modified_at}, downloading`)
-                        this.download()
-                        this.lastRemoteChange.modified_at = new Date(cfg.modified_at)
-                    }
+                    this.download(this.config.store.configSync.configID)
                 }
             } catch (error) {
                 this.logger.debug('Recovering from autoSync network error')
