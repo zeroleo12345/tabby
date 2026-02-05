@@ -101,7 +101,7 @@ export class ConfigSyncService {
             //     }
             // }
             const content = yaml.dump(localData)
-            // TODO
+            // TODO 比较 content 的 cksum 或者 sha1 与 this.lastRemoteChange.cksum 的值
             const result = await this.updateConfig(this.config.store.configSync.configID, {
                 content,
                 last_used_with_version: this.platform.getAppVersion(),
@@ -171,6 +171,8 @@ export class ConfigSyncService {
         await this.config.load()
         await this.config.save()
         this.lastRemoteChange.modified_at = new Date(config.modified_at)
+        // TOD 计算字符串字段 data 的 md5 或者 sha1, 存入 this.lastRemoteChange.cksum
+        this.lastRemoteChange.cksum = cksum(data)
     }
 
     private async request (method: 'GET'|'POST'|'PATCH'|'DELETE', url: string, params = {}) {
