@@ -665,7 +665,6 @@ export class SSHSession {
                         if (promptResult.remember) {
                             this.savedPassword = promptResult.value
                         }
-                        // console.log(`111 authenticateWithPassword authUsername: ${this.authUsername}, password: ${promptResult.value}`)
                         const result = await this.ssh.authenticateWithPassword(this.authUsername, promptResult.value)
                         if (result instanceof russh.AuthenticatedSSHClient) {
                             return result
