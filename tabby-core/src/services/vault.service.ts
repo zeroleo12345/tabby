@@ -203,12 +203,12 @@ export class VaultService {
         if (!vault) {
             return null
         }
-        let vaultSecret = vault.secrets.find(s => s.type === type && this.keyMatches(key, s))
-        if (!vaultSecret) {
-            // search for secret without host in vault (like a default user/password used in multiple servers)
-            key['host'] = null
-            vaultSecret = vault.secrets.find(s => s.type === type && this.keyMatches(key, s))
-        }
+        const vaultSecret = vault.secrets.find(s => s.type === type && this.keyMatches(key, s))
+        //if (!vaultSecret) {
+        //    // search for secret without host in vault (like a default user/password used in multiple servers)
+        //    key['host'] = null
+        //    vaultSecret = vault.secrets.find(s => s.type === type && this.keyMatches(key, s))
+        //}
         return vaultSecret ?? null
     }
 

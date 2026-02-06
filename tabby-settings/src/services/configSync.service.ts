@@ -1,5 +1,6 @@
 import * as yaml from 'js-yaml'
 import axios from 'axios'
+import * as crypto from 'crypto'
 import { Injectable } from '@angular/core'
 import { ConfigService, HostAppService, Logger, LogService, Platform, PlatformService } from 'tabby-core'
 
@@ -21,7 +22,10 @@ const OPTIONAL_CONFIG_PARTS = ['hotkeys', 'appearance', 'vault']
 @Injectable({ providedIn: 'root' })
 export class ConfigSyncService {
     private logger: Logger
-    private lastRemoteChange = new Date(0)
+    private lastRemoteChange = {
+        modified_at: new Date(0),
+        digest: '',
+    }
 
     constructor (
         log: LogService,
@@ -82,7 +86,7 @@ export class ConfigSyncService {
     setConfig (config: Config): void {
         this.config.store.configSync.configID = config.id
         this.config.save()
-        this.lastRemoteChange = new Date(config.modified_at)
+        this.lastRemoteChange.modified_at = new Date(config.modified_at)
     }
 
     async upload (): Promise<void> {
@@ -90,47 +94,61 @@ export class ConfigSyncService {
             return
         }
         try {
-            const data = await this.readConfigDataForSync()
-            const remoteData = yaml.load((await this.getConfig(this.config.store.configSync.configID)).content) as any
-            for (const part of OPTIONAL_CONFIG_PARTS) {
-                if (!this.config.store.configSync.parts[part]) {
-                    data[part] = remoteData[part]
-                }
+            const localContent = await this.platform.loadConfig()
+            // const remoteData = yaml.load((await this.getConfig(this.config.store.configSync.configID)).content) as any
+            // for (const part of OPTIONAL_CONFIG_PARTS) {
+            //     if (!this.config.store.configSync.parts[part]) {
+            //         localData[part] = remoteData[part]
+            //     }
+            // }
+            const digest = this.hashContent(localContent)
+            if (this.lastRemoteChange.digest === digest) {
+                this.logger.debug('Config unchanged, skipping upload')
+                return
             }
-            const content = yaml.dump(data)
+            this.logger.debug(`Config uploaded, remote digest: ${this.lastRemoteChange.digest}, local digest: ${digest}`)
             const result = await this.updateConfig(this.config.store.configSync.configID, {
-                content,
+                content: localContent,
                 last_used_with_version: this.platform.getAppVersion(),
             })
-            this.lastRemoteChange = new Date(result.modified_at)
-            this.logger.debug('Config uploaded')
+            this.lastRemoteChange.modified_at = new Date(result.modified_at)
+            this.lastRemoteChange.digest = digest
         } catch (error) {
             this.logger.error('Upload failed:', error)
             throw error
         }
     }
 
-    async download (): Promise<void> {
+    async download (id: number): Promise<void> {
         if (!this.isEnabled()) {
             return
         }
         try {
-            const config = await this.getConfig(this.config.store.configSync.configID)
-            const data = yaml.load(config.content) as any
+            const remoteConfig = await this.getConfig(id)
 
-            const localData = yaml.load(this.config.readRaw()) as any
-            data.configSync = localData.configSync
+            // const localData = yaml.load(this.config.readRaw()) as any
+            // remoteData.configSync = localData.configSync
 
-            if (!data.encrypted) {
-                for (const part of OPTIONAL_CONFIG_PARTS) {
-                    if (!this.config.store.configSync.parts[part]) {
-                        data[part] = localData[part]
-                    }
+            // if (!remoteData.encrypted) {
+            //     for (const part of OPTIONAL_CONFIG_PARTS) {
+            //         if (!this.config.store.configSync.parts[part]) {
+            //             // 原则上使用云端配置, 但部分设置(hotkeys, appearance, vault)可不同步到云端, 则使用local
+            //             remoteData[part] = localData[part]
+            //         }
+            //     }
+            // }
+
+            if (remoteConfig.id === this.config.store.configSync.configID) {
+                if (new Date(remoteConfig.modified_at) > this.lastRemoteChange.modified_at) {
+                    this.logger.debug(`Remote config changed at ${remoteConfig.modified_at}, syncing`)
+                    await this.writeConfigDataFromSync(remoteConfig)
+                } else {
+                    this.logger.debug(`Remote config unchanged, skip update config`)
                 }
+            } else {
+                this.logger.debug('Config replacing')
+                await this.writeConfigDataFromSync(remoteConfig)
             }
-
-            await this.writeConfigDataFromSync(data)
-            this.logger.debug('Config downloaded')
         } catch (error) {
             this.logger.error('Download failed:', error)
             throw error
@@ -153,8 +171,15 @@ export class ConfigSyncService {
         return data
     }
 
-    private async writeConfigDataFromSync (data: any) {
-        await this.platform.saveConfig(yaml.dump(data))
+    private async writeConfigDataFromSync (remoteConfig: Config) {
+        this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
+        const digest = this.hashContent(remoteConfig.content)
+        if (this.lastRemoteChange.digest === digest) {
+            this.logger.debug('Config unchanged, skipping sync')
+            return
+        }
+        this.lastRemoteChange.digest = digest
+        await this.platform.saveConfig(remoteConfig.content)
         await this.config.load()
         await this.config.save()
     }
@@ -186,17 +211,16 @@ export class ConfigSyncService {
         while (true) {
             try {
                 if (this.isEnabled() && this.config.store.configSync.auto) {
-                    const cfg = await this.getConfig(this.config.store.configSync.configID)
-                    if (new Date(cfg.modified_at) > this.lastRemoteChange) {
-                        this.logger.info('Remote config changed, downloading')
-                        this.download()
-                        this.lastRemoteChange = new Date(cfg.modified_at)
-                    }
+                    this.download(this.config.store.configSync.configID)
                 }
             } catch (error) {
                 this.logger.debug('Recovering from autoSync network error')
             }
             await new Promise(resolve => setTimeout(resolve, 60000))
         }
+    }
+
+    private hashContent (content: string): string {
+        return crypto.createHash('sha1').update(content, 'utf8').digest('hex')
     }
 }

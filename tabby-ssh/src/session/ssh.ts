@@ -414,16 +414,16 @@ export class SSHSession {
             }
         })
 
-        this.previouslyDisconnected = false
-        this.ssh.disconnect$.subscribe(() => {
-            if (!this.previouslyDisconnected) {
-                this.previouslyDisconnected = true
-                // Let service messages drain
-                setTimeout(() => {
-                    this.destroy()
-                })
-            }
-        })
+        // this.previouslyDisconnected = false
+        // this.ssh.disconnect$.subscribe(() => {
+        //     if (!this.previouslyDisconnected) {
+        //         this.previouslyDisconnected = true
+        //         // Let service messages drain
+        //         setTimeout(() => {
+        //             this.destroy()
+        //         })
+        //     }
+        // })
 
         // Authentication
 
@@ -644,6 +644,7 @@ export class SSHSession {
 
             remainingMethods = remainingMethods.filter(x => x !== method)
 
+            this.logger.debug(`handleAuth method.type: ${method.type}`)
             if (method.type === 'saved-password') {
                 this.emitServiceMessage(this.translate.instant('Using saved password'))
                 const result = await this.ssh.authenticateWithPassword(this.authUsername, method.password)
@@ -672,7 +673,8 @@ export class SSHSession {
                     } else {
                         continue
                     }
-                } catch {
+                } catch (err) {
+                    console.error('Failed to authenticateWithPassword', err)
                     continue
                 }
             }
@@ -817,7 +819,7 @@ export class SSHSession {
     }
 
     async destroy (): Promise<void> {
-        this.logger.info(`111 SSH Destroying`)
+        this.logger.info(`SSH Destroying`)
         this.willDestroy.next()
         this.willDestroy.complete()
         this.serviceMessage.complete()

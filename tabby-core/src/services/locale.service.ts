@@ -266,6 +266,7 @@ export class TabbyFormatedDatePipe implements PipeTransform {
     constructor (private locale: LocaleService) {}
 
     transform (date: string): string {
-        return formatDate(date, 'medium', this.locale.getLocale())
+        // return formatDate(date, 'medium', this.locale.getLocale())
+        return formatDate(date, 'yyyy-MM-dd HH:mm', this.locale.getLocale())
     }
 }

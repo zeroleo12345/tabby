@@ -103,8 +103,8 @@ export class ConfigSyncSettingsTabComponent extends BaseComponent {
         })).response === 1) {
             return
         }
-        this.configSync.setConfig(cfg)
-        await this.configSync.download()
+        // this.configSync.setConfig(cfg)
+        await this.configSync.download(cfg.id)
         this.notifications.info(this.translate.instant('Config downloaded'))
     }
 
