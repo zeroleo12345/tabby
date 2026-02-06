@@ -262,7 +262,6 @@ export class SSHSession {
     }
 
     private async populateStoredPasswordsForResolvedUsername (): Promise<void> {
-        console.log(`111 authUsername: ${this.authUsername}, host: ${this.profile.options.host}`)
         if (!this.authUsername) {
             return
         }
@@ -271,7 +270,6 @@ export class SSHSession {
         if (!storedPassword) {
             return
         }
-        console.log(`111 storedPassword: ${storedPassword}`)
 
         if (!this.profile.options.auth || this.profile.options.auth === 'password') {
             const hasSavedPassword = this.allAuthMethods.some(method => method.type === 'saved-password' && method.password === storedPassword)
@@ -646,7 +644,7 @@ export class SSHSession {
 
             remainingMethods = remainingMethods.filter(x => x !== method)
 
-            console.log(`111 handleAuth method.type: ${method.type}`)
+            this.logger.debug(`handleAuth method.type: ${method.type}`)
             if (method.type === 'saved-password') {
                 this.emitServiceMessage(this.translate.instant('Using saved password'))
                 const result = await this.ssh.authenticateWithPassword(this.authUsername, method.password)
@@ -663,14 +661,12 @@ export class SSHSession {
 
                 try {
                     const promptResult = await modal.result.catch(() => null)
-                    console.log(`111 promptResult`, promptResult)
                     if (promptResult) {
                         if (promptResult.remember) {
                             this.savedPassword = promptResult.value
                         }
-                        console.log(`111 authenticateWithPassword authUsername: ${this.authUsername}, password: ${promptResult.value}`)
+                        // console.log(`111 authenticateWithPassword authUsername: ${this.authUsername}, password: ${promptResult.value}`)
                         const result = await this.ssh.authenticateWithPassword(this.authUsername, promptResult.value)
-                        console.log(`111 result:`, result)
                         if (result instanceof russh.AuthenticatedSSHClient) {
                             return result
                         }
@@ -824,7 +820,7 @@ export class SSHSession {
     }
 
     async destroy (): Promise<void> {
-        this.logger.info(`111 SSH Destroying`)
+        this.logger.info(`SSH Destroying`)
         this.willDestroy.next()
         this.willDestroy.complete()
         this.serviceMessage.complete()
