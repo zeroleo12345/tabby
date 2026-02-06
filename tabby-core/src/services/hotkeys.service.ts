@@ -234,8 +234,8 @@ export class HotkeysService {
         const currentSequence = this.getCurrentKeystrokes()
 
         const config = this.getHotkeysConfig()
-        // TODO
         // console.log(`111 all hotkeys:`, config)
+        // TODO
         for (const id in config) {
             for (const sequence of config[id]) {
                 // console.log(`111 hotkey name: ${id}`)
