@@ -103,7 +103,7 @@ export class ConfigSyncService {
             // }
             const digest = this.hashContent(localContent)
             console.log(`111 upload local config, remote digest: ${digest}, local digest: ${this.lastRemoteChange.digest}`)
-            console.log(`111 downloaded content:`, localContent)
+            console.log(`111 upload content:`, localContent)
             if (this.lastRemoteChange.digest === digest) {
                 this.logger.info('Config unchanged, skipping upload')
                 return
