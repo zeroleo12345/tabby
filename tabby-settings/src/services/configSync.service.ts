@@ -103,10 +103,10 @@ export class ConfigSyncService {
             // }
             const digest = this.hashContent(localContent)
             if (this.lastRemoteChange.digest === digest) {
-                this.logger.info('Config unchanged, skipping upload')
+                this.logger.debug('Config unchanged, skipping upload')
                 return
             }
-            this.logger.info(`Config uploaded, remote digest: ${this.lastRemoteChange.digest}, local digest: ${digest}`)
+            this.logger.debug(`Config uploaded, remote digest: ${this.lastRemoteChange.digest}, local digest: ${digest}`)
             const result = await this.updateConfig(this.config.store.configSync.configID, {
                 content: localContent,
                 last_used_with_version: this.platform.getAppVersion(),
@@ -175,7 +175,7 @@ export class ConfigSyncService {
         this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
         const digest = this.hashContent(remoteConfig.content)
         if (this.lastRemoteChange.digest === digest) {
-            this.logger.info('Config unchanged, skipping sync')
+            this.logger.debug('Config unchanged, skipping sync')
             return
         }
         this.lastRemoteChange.digest = digest
