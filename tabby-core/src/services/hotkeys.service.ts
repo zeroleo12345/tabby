@@ -104,7 +104,7 @@ export class HotkeysService {
     propagationKeyEventHandler (eventName: string, nativeEvent: KeyboardEvent): boolean {
         const isMatch = this.pushKeyEvent(eventName, nativeEvent)
         if (isMatch) {
-            // console.log(`111 match hotkey. preventDefault and stopPropagation:`, nativeEvent)
+            // console.log(`111 hotkey matched. preventDefault and stopPropagation:`, nativeEvent)
             nativeEvent.preventDefault()
             nativeEvent.stopPropagation()
             return false
@@ -223,7 +223,7 @@ export class HotkeysService {
 
     matchActiveHotkey (partial = false): string|null {
         if (!this.isEnabled() || !this.pressedKeystroke) {
-            // console.log(`111 not matched, isEnabled: ${this.isEnabled()}, pressedKeystroke: ${this.pressedKeystroke}`)
+            // console.log(`111 not hotkey matched, isEnabled: ${this.isEnabled()}, pressedKeystroke: ${this.pressedKeystroke}`)
             return null
         }
         const matches: {
