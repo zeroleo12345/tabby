@@ -102,8 +102,6 @@ export class ConfigSyncService {
             //     }
             // }
             const digest = this.hashContent(localContent)
-            console.log(`111 upload local config, remote digest: ${digest}, local digest: ${this.lastRemoteChange.digest}`)
-            console.log(`111 content upload:`, localContent)
             if (this.lastRemoteChange.digest === digest) {
                 this.logger.info('Config unchanged, skipping upload')
                 return
@@ -176,8 +174,6 @@ export class ConfigSyncService {
     private async writeConfigDataFromSync (remoteConfig: Config) {
         this.lastRemoteChange.modified_at = new Date(remoteConfig.modified_at)
         const digest = this.hashContent(remoteConfig.content)
-        console.log(`111 sync remote config, remote digest: ${digest}, local digest: ${this.lastRemoteChange.digest}`)
-        console.log(`111 content download:`, remoteConfig.content)
         if (this.lastRemoteChange.digest === digest) {
             this.logger.info('Config unchanged, skipping sync')
             return
