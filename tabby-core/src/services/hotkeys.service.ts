@@ -191,7 +191,7 @@ export class HotkeysService {
         }
 
         const hotkey = this.matchActiveHotkey(false)
-        console.log(`111 matchActiveHotkey return value: ${hotkey}`)
+        // console.log(`111 matchActiveHotkey return value: ${hotkey}`)
         if (hotkey) {
             if (this.recognitionPhase) {
                 this.zone.run(() => {
@@ -285,15 +285,13 @@ export class HotkeysService {
         // console.log(`111 matches: ${matches}`)
         matches.sort((a, b) => b.sequence.length - a.sequence.length)
         if (!matches.length) {
-            // console.log(`111 not matched`)
             return null
         }
         if (matches[0].sequence.length > 1) {
             this.clearCurrentKeystrokes()
         }
-        // console.log(`111 matched`)
         if (['select-all'].includes(matches[0].id) && this.contextKey['terminalTabFocus'] === false) {
-            // 当 terminal tab focus 时候, select-all 快捷键才生效, 否则 return null
+            // only terminal tab focus, hotkey "select-all" work, else return null
             return null
         }
         return matches[0].id
