@@ -349,7 +349,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
 
         this.focused$.subscribe(() => {
             console.log(`111 baseTerminal focus`)
-            this.hotkeys.contextKey['terminalTabFocus'] = false
+            this.hotkeys.contextKey['terminalTabFocus'] = true
             this.configure()
             this.frontend?.focus()
         })
