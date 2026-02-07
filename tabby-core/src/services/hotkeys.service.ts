@@ -369,8 +369,6 @@ export class HotkeysService {
     }
 
     private getHotkeysConfig () {
-        // 每次都从store读取并解析hotkeys map, 可优化性能
-        console.log(`getHotkeysConfigRecursive`)
         return this.getHotkeysConfigRecursive(this.config.store.hotkeys)
     }
 
