@@ -26,6 +26,11 @@ export class HotkeysService {
     matchedHotkey = new EventEmitter<string>()
 
     /**
+     * Context key for each component status
+     */
+    contextKey = new Map<KeyName, boolean>()
+
+    /**
      * Fired for each recognized hotkey
      */
     get unfilteredHotkey$ (): Observable<string> { return this._hotkey }
@@ -66,6 +71,7 @@ export class HotkeysService {
     private _keystroke = new Subject<Keystroke>()
     private disabledLevel = 0
     private hotkeyDescriptions: HotkeyDescription[] = []
+    private hotkeyConfig = {}
 
     private pressedKeys = new Set<KeyName>()
     private pressedKeyTimestamps = new Map<KeyName, number>()
@@ -92,6 +98,10 @@ export class HotkeysService {
                     this.propagationKeyEventHandler(eventType, nativeEvent)
                 })
             })
+            this.hotkeyConfig = this.getHotkeysConfig()
+        })
+        this.config.changed$.subscribe(() => {
+            this.hotkeyConfig = this.getHotkeysConfig()
         })
 
         // deprecated
@@ -186,6 +196,7 @@ export class HotkeysService {
         }
 
         const hotkey = this.matchActiveHotkey(false)
+        // console.log(`111 matchActiveHotkey return value: ${hotkey}`)
         if (hotkey) {
             if (this.recognitionPhase) {
                 this.zone.run(() => {
@@ -233,11 +244,9 @@ export class HotkeysService {
 
         const currentSequence = this.getCurrentKeystrokes()
 
-        const config = this.getHotkeysConfig()
         // console.log(`111 all hotkeys:`, config)
-        // TODO
-        for (const id in config) {
-            for (const sequence of config[id]) {
+        for (const id in this.hotkeyConfig) {
+            for (const sequence of this.hotkeyConfig[id]) {
                 // console.log(`111 hotkey name: ${id}`)
                 // console.log(`111 input: ${currentSequence}, ${currentSequence.length})
                 // console.log(`111 config: ${sequence}, ${sequence.length})
@@ -280,13 +289,15 @@ export class HotkeysService {
         // console.log(`111 matches: ${matches}`)
         matches.sort((a, b) => b.sequence.length - a.sequence.length)
         if (!matches.length) {
-            // console.log(`111 not matched`)
             return null
         }
         if (matches[0].sequence.length > 1) {
             this.clearCurrentKeystrokes()
         }
-        // console.log(`111 matched`)
+        if (['select-all'].includes(matches[0].id) && this.contextKey['terminalTabFocus'] === false) {
+            // only terminal tab focus, hotkey "select-all" work, else return null
+            return null
+        }
         return matches[0].id
     }
 
