@@ -120,9 +120,6 @@ export class ConfigSyncService {
     }
 
     async download (id: number): Promise<void> {
-        if (!this.isEnabled()) {
-            return
-        }
         try {
             const remoteConfig = await this.getConfig(id)
 
