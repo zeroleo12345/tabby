@@ -292,15 +292,9 @@ export class HotkeysService {
             this.clearCurrentKeystrokes()
         }
         // console.log(`111 matched`)
-        if (['select-all'].includes(matches[0].id)) {
-            console.log(`111 hotkey select-all`)
-            if (this.contextKey['terminalTabFocus'] === false) {
-                console.log(`select-all: but no focus on terminal tab`)
-                // 当 terminal tab focus 时候, select-all 快捷键才生效, 否则 return null
-                return null
-            } else {
-                console.log(`select-all matched`)
-            }
+        if (['select-all'].includes(matches[0].id) && this.contextKey['terminalTabFocus'] === false) {
+            // 当 terminal tab focus 时候, select-all 快捷键才生效, 否则 return null
+            return null
         }
         return matches[0].id
     }
