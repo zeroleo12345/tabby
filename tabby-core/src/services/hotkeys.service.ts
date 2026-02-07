@@ -191,6 +191,7 @@ export class HotkeysService {
         }
 
         const hotkey = this.matchActiveHotkey(false)
+        console.log(`111 matchActiveHotkey return value: ${hotkey}`)
         if (hotkey) {
             if (this.recognitionPhase) {
                 this.zone.run(() => {
