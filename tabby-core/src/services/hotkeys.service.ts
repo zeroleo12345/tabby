@@ -71,6 +71,7 @@ export class HotkeysService {
     private _keystroke = new Subject<Keystroke>()
     private disabledLevel = 0
     private hotkeyDescriptions: HotkeyDescription[] = []
+    private hotkeyConfig = {}
 
     private pressedKeys = new Set<KeyName>()
     private pressedKeyTimestamps = new Map<KeyName, number>()
@@ -97,6 +98,9 @@ export class HotkeysService {
                     this.propagationKeyEventHandler(eventType, nativeEvent)
                 })
             })
+        })
+        this.config.changed$.subscribe(() => {
+            this.hotkeyConfig = this.getHotkeysConfig()
         })
 
         // deprecated
@@ -239,10 +243,9 @@ export class HotkeysService {
 
         const currentSequence = this.getCurrentKeystrokes()
 
-        const config = this.getHotkeysConfig()
         // console.log(`111 all hotkeys:`, config)
-        for (const id in config) {
-            for (const sequence of config[id]) {
+        for (const id in this.hotkeyConfig) {
+            for (const sequence of this.hotkeyConfig[id]) {
                 // console.log(`111 hotkey name: ${id}`)
                 // console.log(`111 input: ${currentSequence}, ${currentSequence.length})
                 // console.log(`111 config: ${sequence}, ${sequence.length})
@@ -366,6 +369,7 @@ export class HotkeysService {
 
     private getHotkeysConfig () {
         // 每次都从store读取并解析hotkeys map, 可优化性能
+        console.log(`getHotkeysConfigRecursive`)
         return this.getHotkeysConfigRecursive(this.config.store.hotkeys)
     }
 
