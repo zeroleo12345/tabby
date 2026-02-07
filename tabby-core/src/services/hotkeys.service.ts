@@ -98,6 +98,7 @@ export class HotkeysService {
                     this.propagationKeyEventHandler(eventType, nativeEvent)
                 })
             })
+            this.hotkeyConfig = this.getHotkeysConfig()
         })
         this.config.changed$.subscribe(() => {
             this.hotkeyConfig = this.getHotkeysConfig()
