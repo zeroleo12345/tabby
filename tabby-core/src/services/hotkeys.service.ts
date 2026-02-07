@@ -26,6 +26,11 @@ export class HotkeysService {
     matchedHotkey = new EventEmitter<string>()
 
     /**
+     * Context key for each component status
+     */
+    contextKey = new Map<KeyName, boolean>()
+
+    /**
      * Fired for each recognized hotkey
      */
     get unfilteredHotkey$ (): Observable<string> { return this._hotkey }
@@ -235,7 +240,6 @@ export class HotkeysService {
 
         const config = this.getHotkeysConfig()
         // console.log(`111 all hotkeys:`, config)
-        // TODO
         for (const id in config) {
             for (const sequence of config[id]) {
                 // console.log(`111 hotkey name: ${id}`)
@@ -287,6 +291,10 @@ export class HotkeysService {
             this.clearCurrentKeystrokes()
         }
         // console.log(`111 matched`)
+        // TODO 当 tab active 时候, select-all 快捷键才生效, 即 return null
+        // if (matches[0].id in ['select-all'] && isTabActive) {
+        //     return null
+        // }
         return matches[0].id
     }
 
@@ -358,6 +366,7 @@ export class HotkeysService {
     }
 
     private getHotkeysConfig () {
+        // 每次都从store读取并解析hotkeys map, 可优化性能
         return this.getHotkeysConfigRecursive(this.config.store.hotkeys)
     }
 

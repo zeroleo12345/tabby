@@ -348,6 +348,8 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.pinToolbar = this.enableToolbar && (window.localStorage.pinTerminalToolbar ?? 'true') === 'true'
 
         this.focused$.subscribe(() => {
+            console.log(`111 baseTerminal focus`)
+            this.hotkeys.contextKey['terminalTabFocus'] = false
             this.configure()
             this.frontend?.focus()
         })
@@ -446,6 +448,8 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.frontend.focus()
 
         this.blurred$.subscribe(() => {
+            console.log(`111 baseTerminal blurred`)
+            this.hotkeys.contextKey['terminalTabFocus'] = false
             this.multifocus.cancel()
         })
 
