@@ -153,8 +153,8 @@ export default class ElectronModule {
             )
 
             for (const { packageName, version } of this.config.store.pluginList.filter(plugin => installedPluginVersions.get(plugin.packageName) !== plugin.version)) {
-                await (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version)
-                this.config.requestRestart()
+                // async install plugin
+                (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version).then(() => this.config.requestRestart())
             }
         })
     }
