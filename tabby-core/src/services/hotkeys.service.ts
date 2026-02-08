@@ -157,7 +157,7 @@ export class HotkeysService {
             shiftKey: nativeEvent.shiftKey,
             code: nativeEvent.code,
             key: nativeEvent.key,
-            eventName,
+            eventName: eventName,
             time: nativeEvent.timeStamp,
             registrationTime: performance.now(),
         }
@@ -196,23 +196,21 @@ export class HotkeysService {
             this.pressedKeystroke = null
         }
 
-        if (eventName === 'keydown') {
-            const hotkey = this.matchActiveHotkey(false)
-            // console.log(`111 matchActiveHotkey return value: ${hotkey}`)
-            if (hotkey) {
-                if (this.recognitionPhase) {
-                    this.zone.run(() => {
-                        this.emitHotkeyOn(hotkey)
-                    })
-                    isMatch = true
-                }
-            } else if (this.pressedHotkey) {
+        const hotkey = this.matchActiveHotkey(eventName, false)
+        // console.log(`111 matchActiveHotkey return value: ${hotkey}`)
+        if (hotkey) {
+            if (this.recognitionPhase) {
                 this.zone.run(() => {
-                    if (this.pressedHotkey) {
-                        this.emitHotkeyOff(this.pressedHotkey)
-                    }
+                    this.emitHotkeyOn(hotkey)
                 })
+                isMatch = true
             }
+        } else if (this.pressedHotkey) {
+            this.zone.run(() => {
+                if (this.pressedHotkey) {
+                    this.emitHotkeyOff(this.pressedHotkey)
+                }
+            })
         }
 
         this.zone.run(() => {
@@ -235,9 +233,12 @@ export class HotkeysService {
         return [...this.lastKeystrokes.map(x => x.keystroke), this.pressedKeystroke]
     }
 
-    matchActiveHotkey (partial = false): string|null {
+    matchActiveHotkey (eventName: string, partial = false): string|null {
         if (!this.isEnabled() || !this.pressedKeystroke) {
             // console.log(`111 not hotkey matched, isEnabled: ${this.isEnabled()}, pressedKeystroke: ${this.pressedKeystroke}`)
+            return null
+        }
+        if (eventName === 'keyup') {
             return null
         }
         const matches: {
