@@ -105,8 +105,10 @@ export class HotkeysService {
         })
 
         // deprecated
-        this.hotkey$.subscribe(h => this.matchedHotkey.emit(h))
-        this.matchedHotkey.subscribe = deprecate(s => this.hotkey$.subscribe(s), 'matchedHotkey is deprecated, use hotkey$')
+        // this.hotkey$.subscribe(h => this.matchedHotkey.emit(h))
+        this.matchedHotkey.subscribe(() => {
+            this.hotkeyConfig = this.getHotkeysConfig()
+        })
         this.keyEvent$.subscribe(h => this.key.next(h))
         this.key.subscribe = deprecate(s => this.keyEvent$.subscribe(s), 'key is deprecated, use keyEvent$')
     }
