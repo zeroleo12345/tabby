@@ -168,6 +168,7 @@ export class HotkeysService {
             }
         }
 
+        // console.log(`111 pushKeyEvent eventName: ${eventName}, nativeEvent:`, nativeEvent)
         const keyName = getKeyName(eventData)
         if (eventName === 'keydown') {
             this.addPressedKey(keyName, eventData)
@@ -195,21 +196,23 @@ export class HotkeysService {
             this.pressedKeystroke = null
         }
 
-        const hotkey = this.matchActiveHotkey(false)
-        // console.log(`111 matchActiveHotkey return value: ${hotkey}`)
-        if (hotkey) {
-            if (this.recognitionPhase) {
-                this.zone.run(() => {
-                    this.emitHotkeyOn(hotkey)
-                })
-                isMatch = true
-            }
-        } else if (this.pressedHotkey) {
-            this.zone.run(() => {
-                if (this.pressedHotkey) {
-                    this.emitHotkeyOff(this.pressedHotkey)
+        if (eventName === 'keydown') {
+            const hotkey = this.matchActiveHotkey(false)
+            // console.log(`111 matchActiveHotkey return value: ${hotkey}`)
+            if (hotkey) {
+                if (this.recognitionPhase) {
+                    this.zone.run(() => {
+                        this.emitHotkeyOn(hotkey)
+                    })
+                    isMatch = true
                 }
-            })
+            } else if (this.pressedHotkey) {
+                this.zone.run(() => {
+                    if (this.pressedHotkey) {
+                        this.emitHotkeyOff(this.pressedHotkey)
+                    }
+                })
+            }
         }
 
         this.zone.run(() => {
