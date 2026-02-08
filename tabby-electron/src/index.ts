@@ -141,22 +141,29 @@ export default class ElectronModule {
             this.updateDarkMode()
         })
 
-        config.changed$.subscribe(() => this.updateWindowControlsColor())
+        config.changed$.subscribe(() => {
+            this.updateWindowControlsColor()
+            this.checkPluginUpdate()
+        })
 
         config.ready$.toPromise().then(() => {
             dockMenu.update()
         })
 
         app.ready$.subscribe(async () => {
-            const installedPluginVersions = new Map(
-                bootstrapData.installedPlugins.map(item => [item.packageName, item.version]),
-            )
-
-            for (const { packageName, version } of this.config.store.pluginList.filter(plugin => installedPluginVersions.get(plugin.packageName) !== plugin.version)) {
-                // async install plugin
-                (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version).then(() => this.config.requestRestart())
-            }
+            this.checkPluginUpdate()
         })
+    }
+
+    private checkPluginUpdate () {
+        const installedPluginVersions = new Map(
+            this.bootstrapData.installedPlugins.map(item => [item.packageName, item.version]),
+        )
+
+        for (const { packageName, version } of this.config.store.pluginList.filter(plugin => installedPluginVersions.get(plugin.packageName) !== plugin.version)) {
+            // async install plugin
+            (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version).then(() => this.config.requestRestart())
+        }
     }
 
     private registerGlobalHotkey () {
