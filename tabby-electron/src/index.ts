@@ -1,4 +1,4 @@
-import {Inject, NgModule} from '@angular/core'
+import { Inject, NgModule } from '@angular/core'
 import { FileService, PlatformService, LogService, UpdaterService, DockingService, HostAppService, ThemesService, Platform, AppService, ConfigService, WIN_BUILD_FLUENT_BG_SUPPORTED, isWindowsBuild, HostWindowService, HotkeyProvider, ConfigProvider, FileProvider, BOOTSTRAP_DATA, BootstrapData } from 'tabby-core'
 import { TerminalColorSchemeProvider, TerminalDecorator } from 'tabby-terminal'
 import { SFTPContextMenuItemProvider, SSHProfileImporter, AutoPrivateKeyLocator } from 'tabby-ssh'
@@ -38,7 +38,7 @@ import { WindowsDefaultShellProvider } from './shells/winDefault'
 import { WindowsStockShellsProvider } from './shells/windowsStock'
 import { WSLShellProvider } from './shells/wsl'
 import { VSDevToolsProvider } from './shells/vs'
-import promiseIpc, {RendererProcessType} from "electron-promise-ipc";
+import promiseIpc, { RendererProcessType } from 'electron-promise-ipc'
 
 @NgModule({
     providers: [
@@ -141,22 +141,29 @@ export default class ElectronModule {
             this.updateDarkMode()
         })
 
-        config.changed$.subscribe(() => this.updateWindowControlsColor())
+        config.changed$.subscribe(() => {
+            this.updateWindowControlsColor()
+            this.checkPluginUpdate()
+        })
 
         config.ready$.toPromise().then(() => {
             dockMenu.update()
         })
 
         app.ready$.subscribe(async () => {
-            const installedPackageNames = new Set(
-                bootstrapData.installedPlugins.map(item => item.packageName)
-            )
-
-            for (const {packageName, version} of this.config.store.pluginList.filter(plugin => !installedPackageNames.has(plugin.packageName))) {
-                await (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version)
-                this.config.requestRestart()
-            }
+            this.checkPluginUpdate()
         })
+    }
+
+    private checkPluginUpdate () {
+        const installedPluginVersions = new Map(
+            this.bootstrapData.installedPlugins.map(item => [item.packageName, item.version]),
+        )
+
+        for (const { packageName, version } of this.config.store.pluginList.filter(plugin => installedPluginVersions.get(plugin.packageName) !== plugin.version)) {
+            // async install plugin
+            (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version).then(() => this.config.requestRestart())
+        }
     }
 
     private registerGlobalHotkey () {

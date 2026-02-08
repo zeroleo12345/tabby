@@ -105,8 +105,10 @@ export class HotkeysService {
         })
 
         // deprecated
-        this.hotkey$.subscribe(h => this.matchedHotkey.emit(h))
-        this.matchedHotkey.subscribe = deprecate(s => this.hotkey$.subscribe(s), 'matchedHotkey is deprecated, use hotkey$')
+        // this.hotkey$.subscribe(h => this.matchedHotkey.emit(h))
+        this.matchedHotkey.subscribe(() => {
+            this.hotkeyConfig = this.getHotkeysConfig()
+        })
         this.keyEvent$.subscribe(h => this.key.next(h))
         this.key.subscribe = deprecate(s => this.keyEvent$.subscribe(s), 'key is deprecated, use keyEvent$')
     }
@@ -157,7 +159,7 @@ export class HotkeysService {
             shiftKey: nativeEvent.shiftKey,
             code: nativeEvent.code,
             key: nativeEvent.key,
-            eventName,
+            eventName: eventName,
             time: nativeEvent.timeStamp,
             registrationTime: performance.now(),
         }
@@ -168,6 +170,7 @@ export class HotkeysService {
             }
         }
 
+        // console.log(`111 pushKeyEvent eventName: ${eventName}, nativeEvent:`, nativeEvent)
         const keyName = getKeyName(eventData)
         if (eventName === 'keydown') {
             this.addPressedKey(keyName, eventData)
@@ -195,7 +198,7 @@ export class HotkeysService {
             this.pressedKeystroke = null
         }
 
-        const hotkey = this.matchActiveHotkey(false)
+        const hotkey = this.matchActiveHotkey(eventName, false)
         // console.log(`111 matchActiveHotkey return value: ${hotkey}`)
         if (hotkey) {
             if (this.recognitionPhase) {
@@ -232,9 +235,12 @@ export class HotkeysService {
         return [...this.lastKeystrokes.map(x => x.keystroke), this.pressedKeystroke]
     }
 
-    matchActiveHotkey (partial = false): string|null {
+    matchActiveHotkey (eventName: string, partial = false): string|null {
         if (!this.isEnabled() || !this.pressedKeystroke) {
             // console.log(`111 not hotkey matched, isEnabled: ${this.isEnabled()}, pressedKeystroke: ${this.pressedKeystroke}`)
+            return null
+        }
+        if (eventName === 'keyup') {
             return null
         }
         const matches: {
