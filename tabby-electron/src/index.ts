@@ -148,11 +148,11 @@ export default class ElectronModule {
         })
 
         app.ready$.subscribe(async () => {
-            const installedPackageNames = new Set(
-                bootstrapData.installedPlugins.map(item => item.packageName)
+            const installedPluginVersions = new Map(
+                bootstrapData.installedPlugins.map(item => [item.packageName, item.version])
             )
 
-            for (const {packageName, version} of this.config.store.pluginList.filter(plugin => !installedPackageNames.has(plugin.packageName))) {
+            for (const {packageName, version} of this.config.store.pluginList.filter(plugin => installedPluginVersions.get(plugin.packageName) !== plugin.version)) {
                 await (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version)
                 this.config.requestRestart()
             }
