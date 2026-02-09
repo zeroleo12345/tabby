@@ -89,7 +89,7 @@ export class ConfigSyncSettingsTabComponent extends BaseComponent {
             this.loadConfigs()
             this.notifications.info(this.translate.instant('Config uploaded'))
         } else {
-            this.notifications.info('Skip Config upload')
+            this.notifications.info('Skip Config upload!')
         }
     }
 
@@ -110,7 +110,7 @@ export class ConfigSyncSettingsTabComponent extends BaseComponent {
         if (await this.configSync.download(cfg.id)) {
             this.notifications.info(this.translate.instant('Config downloaded'))
         } else {
-            this.notifications.info('Skip Config downloaded')
+            this.notifications.info('Skip Config download!')
         }
     }
 
