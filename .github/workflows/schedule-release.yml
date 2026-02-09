@@ -2,8 +2,8 @@ name: daily-tagged-and-release
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # UTC 00:00
-  workflow_dispatch:     # 手动触发（方便测试）
+    - cron: '0 18 * * *'   # UTC
+  workflow_dispatch:     # 支持手动触发（方便测试）
 
 concurrency:
   group: auto-tag
