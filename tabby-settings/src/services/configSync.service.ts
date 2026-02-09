@@ -36,6 +36,7 @@ export class ConfigSyncService {
         this.logger = log.create('configSync')
         config.ready$.toPromise().then(() => {
             this.autoSync()
+
             config.changed$.subscribe(() => {
                 if (this.isEnabled() && this.config.store.configSync.auto) {
                     this.upload()
@@ -89,9 +90,9 @@ export class ConfigSyncService {
         this.lastRemoteChange.modified_at = new Date(config.modified_at)
     }
 
-    async upload (): Promise<void> {
+    async upload (): Promise<boolean> {
         if (!this.isEnabled()) {
-            return
+            return false
         }
         try {
             const localContent = await this.platform.loadConfig()
@@ -104,7 +105,7 @@ export class ConfigSyncService {
             const digest = this.hashContent(localContent)
             if (this.lastRemoteChange.digest === digest) {
                 this.logger.debug('Config unchanged, skipping upload')
-                return
+                return false
             }
             this.logger.debug(`Config uploaded, remote digest: ${this.lastRemoteChange.digest}, local digest: ${digest}`)
             const result = await this.updateConfig(this.config.store.configSync.configID, {
@@ -117,9 +118,10 @@ export class ConfigSyncService {
             this.logger.error('Upload failed:', error)
             throw error
         }
+        return true
     }
 
-    async download (id: number): Promise<void> {
+    async download (id: number): Promise<boolean> {
         try {
             const remoteConfig = await this.getConfig(id)
 
@@ -141,6 +143,7 @@ export class ConfigSyncService {
                     await this.writeConfigDataFromSync(remoteConfig)
                 } else {
                     this.logger.debug(`Remote config unchanged, skip update config`)
+                    return false
                 }
             } else {
                 this.logger.debug('Config replacing')
@@ -150,6 +153,7 @@ export class ConfigSyncService {
             this.logger.error('Download failed:', error)
             throw error
         }
+        return true
     }
 
     async delete (config: Config): Promise<void> {
