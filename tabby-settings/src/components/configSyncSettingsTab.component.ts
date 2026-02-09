@@ -85,9 +85,12 @@ export class ConfigSyncSettingsTabComponent extends BaseComponent {
             }
         }
         this.configSync.setConfig(cfg)
-        await this.configSync.upload()
-        this.loadConfigs()
-        this.notifications.info(this.translate.instant('Config uploaded'))
+        if (await this.configSync.upload()) {
+            this.loadConfigs()
+            this.notifications.info(this.translate.instant('Config uploaded'))
+        } else {
+            this.notifications.info('Skip Config upload')
+        }
     }
 
     async downloadAndSync (cfg: Config) {
@@ -104,8 +107,11 @@ export class ConfigSyncSettingsTabComponent extends BaseComponent {
             return
         }
         // this.configSync.setConfig(cfg)
-        await this.configSync.download(cfg.id)
-        this.notifications.info(this.translate.instant('Config downloaded'))
+        if (await this.configSync.download(cfg.id)) {
+            this.notifications.info(this.translate.instant('Config downloaded'))
+        } else {
+            this.notifications.info('Skip Config downloaded')
+        }
     }
 
     async delete (cfg: Config) {
