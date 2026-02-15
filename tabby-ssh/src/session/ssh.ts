@@ -105,7 +105,7 @@ export class SSHSession {
     get willDestroy$ (): Observable<void> { return this.willDestroy }
 
     activePrivateKey: russh.KeyPair|null = null
-    authUsername: string = ""
+    authUsername: string = ''
 
     open = false
 
@@ -429,13 +429,12 @@ export class SSHSession {
 
         this.authUsername ??= this.profile.options.user
         if (!this.authUsername) {
-            const modal = this.ngbModal.open(PromptModalComponent)
-            modal.componentInstance.prompt = `Username for ${this.profile.options.host}`
+            const modal = this.ngbModal.open(PromptCredentialsModalComponent)
             try {
-                const result = await modal.result.catch(() => null)
-                this.authUsername = result?.value ?? null
+                const promptResult = await modal.result.catch(() => null)
+                this.authUsername = promptResult.value ?? ''
             } catch {
-                this.authUsername = 'root'
+                this.authUsername = ''
             }
         }
 
