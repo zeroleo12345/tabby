@@ -1,11 +1,11 @@
-import { Component, Input, ViewChild, ElementRef } from '@angular/core'
+import { Component, Input, ViewChild, ElementRef, AfterViewInit } from '@angular/core'
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap'
 
 /** @hidden */
 @Component({
     templateUrl: './promptCredentialsModal.component.pug',
 })
-export class PromptCredentialsModalComponent {
+export class PromptCredentialsModalComponent implements AfterViewInit {
     @Input() username: string
     @Input() password: string
     @Input() remember = true
@@ -17,9 +17,8 @@ export class PromptCredentialsModalComponent {
         private modalInstance: NgbActiveModal,
     ) { }
 
-    ngOnInit (): void {
+    ngAfterViewInit (): void {
         setTimeout(() => {
-            console.log(`11111: ${this.username}`)
             if (!this.username) {
                 this.usernameInput.nativeElement.focus()
             } else {
