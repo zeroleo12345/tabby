@@ -99,7 +99,6 @@ export class SSHSession {
     sftp?: russh.SFTP
     forwardedPorts: ForwardedPort[] = []
     jumpChannel: russh.NewChannel|null = null
-    savedPassword?: string
     get serviceMessage$ (): Observable<string> { return this.serviceMessage }
     get keyboardInteractivePrompt$ (): Observable<KeyboardInteractivePrompt> { return this.keyboardInteractivePrompt }
     get willDestroy$ (): Observable<void> { return this.willDestroy }
@@ -270,6 +269,7 @@ export class SSHSession {
         if (!storedPassword) {
             return
         }
+        this.logger.info(`loaded SSH password from vault for user ${this.authUsername}`)
 
         if (!this.profile.options.auth || this.profile.options.auth === 'password') {
             const hasSavedPassword = this.allAuthMethods.some(method => method.type === 'saved-password' && method.password === storedPassword)
@@ -430,11 +430,12 @@ export class SSHSession {
         this.authUsername ??= this.profile.options.user
         if (!this.authUsername) {
             const modal = this.ngbModal.open(PromptCredentialsModalComponent)
-            try {
-                const promptResult = await modal.result.catch(() => null)
-                this.authUsername = promptResult.value ?? ''
-            } catch {
-                this.authUsername = ''
+            const promptResult = await modal.result.catch(() => null)
+            if (promptResult) {
+                this.authUsername = promptResult.username ?? ''
+                if (promptResult.remember) {
+                    this.passwordStorage.savePassword(this.profile, promptResult.password, this.authUsername)
+                }
             }
         }
 
