@@ -14,6 +14,7 @@ import { AppRootComponent } from './components/appRoot.component'
 import { CheckboxComponent } from './components/checkbox.component'
 import { TabBodyComponent } from './components/tabBody.component'
 import { PromptModalComponent } from './components/promptModal.component'
+import { PromptCredentialsModalComponent } from './components/promptCredentialsModal.component'
 import { SafeModeModalComponent } from './components/safeModeModal.component'
 import { StartPageComponent } from './components/startPage.component'
 import { TabHeaderComponent } from './components/tabHeader.component'
@@ -109,6 +110,7 @@ const PROVIDERS = [
         AppRootComponent,
         CheckboxComponent,
         PromptModalComponent,
+        PromptCredentialsModalComponent,
         StartPageComponent,
         TabBodyComponent,
         TabHeaderComponent,
@@ -139,6 +141,7 @@ const PROVIDERS = [
         CheckboxComponent,
         ToggleComponent,
         PromptModalComponent,
+        PromptCredentialsModalComponent,
         AutofocusDirective,
         DropZoneDirective,
         FastHtmlBindDirective,
