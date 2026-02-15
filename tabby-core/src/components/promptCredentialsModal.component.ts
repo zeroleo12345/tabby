@@ -7,7 +7,9 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap'
 })
 export class PromptCredentialsModalComponent implements AfterViewInit {
     @Input() username: string
+    @Input() usernamePrompt = 'username:'
     @Input() password: string
+    @Input() passwordPrompt = 'password:'
     @Input() remember = true
     @Input() showRememberCheckbox = true
     @ViewChild('usernameInput') usernameInput: ElementRef

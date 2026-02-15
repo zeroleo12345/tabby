@@ -437,11 +437,11 @@ export class SSHSession {
         if (!this.authUsername) {
             console.log(`prompt user to input username`)
             const modal = this.ngbModal.open(PromptCredentialsModalComponent)
-            const promptResult = await modal.result.catch(() => null)
-            if (!promptResult) {
+
+            const promptResult = await modal.result.catch(() => {
                 throw new SSHAuthenticationCancelledError()
-            }
-            this.authUsername = promptResult.username ?? ''
+            })
+            this.authUsername = promptResult.username
             if (promptResult.remember && this.authUsername) {
                 this.config.store.profiles.find(p => p.id === this.profile.id).options.user = this.authUsername
                 await this.config.save()
@@ -663,10 +663,9 @@ export class SSHSession {
                 const modal = this.ngbModal.open(PromptCredentialsModalComponent)
                 modal.componentInstance.username = this.authUsername
 
-                const promptResult = await modal.result.catch(() => null)
-                if (!promptResult) {
+                const promptResult = await modal.result.catch(() => {
                     throw new SSHAuthenticationCancelledError()
-                }
+                })
                 this.authUsername = promptResult.username
                 if (promptResult.remember) {
                     this.passwordStorage.savePassword(this.profile, promptResult.password, this.authUsername)
@@ -936,17 +935,16 @@ export class SSHSession {
                 ].includes(e.toString())) {
                     await this.passwordStorage.deletePrivateKeyPassword(keyHash)
 
-                    const modal = this.ngbModal.open(PromptModalComponent)
-                    modal.componentInstance.prompt = 'Private key passphrase'
-                    modal.componentInstance.password = true
-                    modal.componentInstance.showRememberCheckbox = true
+                    const modal = this.ngbModal.open(PromptCredentialsModalComponent)
+                    modal.componentInstance.username = this.authUsername
+                    modal.componentInstance.passwordPrompt = 'Private key passphrase:'
 
-                    const result = await modal.result.catch(() => {
-                        throw new Error('Passphrase prompt cancelled')
+                    const promptResult = await modal.result.catch(() => {
+                        throw new SSHAuthenticationCancelledError()
                     })
 
-                    passphrase = result?.value
-                    if (passphrase && result.remember) {
+                    passphrase = promptResult?.password
+                    if (passphrase && promptResult.remember) {
                         this.passwordStorage.savePrivateKeyPassword(keyHash, passphrase)
                     }
                 } else {
