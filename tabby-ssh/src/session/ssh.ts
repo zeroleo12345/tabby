@@ -269,7 +269,7 @@ export class SSHSession {
         if (!storedPassword) {
             return
         }
-        this.logger.info(`loaded SSH password from vault for user ${this.authUsername}`)
+        this.logger.info(`loaded user ${this.authUsername} password from vault`)
 
         if (!this.profile.options.auth || this.profile.options.auth === 'password') {
             const hasSavedPassword = this.allAuthMethods.some(method => method.type === 'saved-password' && method.password === storedPassword)
