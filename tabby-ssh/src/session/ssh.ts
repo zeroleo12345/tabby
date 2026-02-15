@@ -105,7 +105,7 @@ export class SSHSession {
     get willDestroy$ (): Observable<void> { return this.willDestroy }
 
     activePrivateKey: russh.KeyPair|null = null
-    authUsername: string|null = null
+    authUsername: string = ""
 
     open = false
 
@@ -439,14 +439,14 @@ export class SSHSession {
             }
         }
 
-        if (this.authUsername?.startsWith('$')) {
-            try {
-                const result = process.env[this.authUsername.slice(1)]
-                this.authUsername = result ?? this.authUsername
-            } catch {
-                this.authUsername = 'root'
-            }
-        }
+        // if (this.authUsername?.startsWith('$')) {
+        //     try {
+        //         const result = process.env[this.authUsername.slice(1)]
+        //         this.authUsername = result ?? this.authUsername
+        //     } catch {
+        //         this.authUsername = 'root'
+        //     }
+        // }
 
         await this.populateStoredPasswordsForResolvedUsername()
 
