@@ -435,8 +435,7 @@ export class SSHSession {
             if (promptResult) {
                 this.authUsername = promptResult.username ?? ''
                 if (promptResult.remember && this.authUsername) {
-                    const cProfile = this.config.store.profiles.find(p => p.id === this.profile.id)
-                    cProfile.options.user = this.authUsername
+                    this.config.store.profiles.find(p => p.id === this.profile.id).options.user = this.authUsername
                     await this.config.save()
                     this.passwordStorage.savePassword(this.profile, promptResult.password, this.authUsername)
                 }
