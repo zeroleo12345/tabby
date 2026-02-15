@@ -458,8 +458,10 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                     if (visibility) {
                         // this.frontend.resizeHandler()
                         const term = this.frontend.xterm as any
-                        term._core._renderService.clear()
-                        term._core._renderService.handleResize(term.cols, term.rows)
+                        if (term._core._renderService) {
+                            term._core._renderService.clear()
+                            term._core._renderService.handleResize(term.cols, term.rows)
+                        }
                     } else {
                         this.frontend.xterm.element?.querySelectorAll('canvas').forEach(c => {
                             c.height = c.width = 0

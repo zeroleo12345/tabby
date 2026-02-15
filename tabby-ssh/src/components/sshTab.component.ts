@@ -6,7 +6,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import { Platform, ProfilesService } from 'tabby-core'
 import { BaseTerminalTabComponent, ConnectableTerminalTabComponent } from 'tabby-terminal'
 import { SSHService } from '../services/ssh.service'
-import { KeyboardInteractivePrompt, SSHSession } from '../session/ssh'
+import { KeyboardInteractivePrompt, SSHSession, SSHAuthenticationCancelledError } from '../session/ssh'
 import { SSHPortForwardingModalComponent } from './sshPortForwardingModal.component'
 import { SSHProfile } from '../api'
 import { SSHShellSession } from '../session/shell'
@@ -175,7 +175,11 @@ export class SSHTabComponent extends ConnectableTerminalTabComponent<SSHProfile>
         await super.initializeSession()
         try {
             await this.initializeSessionMaybeMultiplex(true)
-        } catch {
+        } catch (e) {
+            if (e instanceof SSHAuthenticationCancelledError) {
+                this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
+                return
+            }
             try {
                 await this.initializeSessionMaybeMultiplex(false)
             } catch (e) {

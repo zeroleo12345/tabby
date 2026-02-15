@@ -5,7 +5,7 @@ import stripAnsi from 'strip-ansi'
 import * as shellQuote from 'shell-quote'
 import { Injector } from '@angular/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
-import { ConfigService, FileProvidersService, NotificationsService, PromptModalComponent, LogService, Logger, TranslateService, Platform, HostAppService } from 'tabby-core'
+import { ConfigService, FileProvidersService, NotificationsService, PromptModalComponent, PromptCredentialsModalComponent, LogService, Logger, TranslateService, Platform, HostAppService } from 'tabby-core'
 import { Socket } from 'net'
 import { Subject, Observable } from 'rxjs'
 import { HostKeyPromptModalComponent } from '../components/hostKeyPromptModal.component'
@@ -23,6 +23,12 @@ const WINDOWS_OPENSSH_AGENT_PIPE = '\\\\.\\pipe\\openssh-ssh-agent'
 export interface Prompt {
     prompt: string
     echo?: boolean
+}
+
+export class SSHAuthenticationCancelledError extends Error {
+    constructor () {
+        super('Authentication cancelled by user')
+    }
 }
 
 type AuthMethod = {
@@ -99,13 +105,12 @@ export class SSHSession {
     sftp?: russh.SFTP
     forwardedPorts: ForwardedPort[] = []
     jumpChannel: russh.NewChannel|null = null
-    savedPassword?: string
     get serviceMessage$ (): Observable<string> { return this.serviceMessage }
     get keyboardInteractivePrompt$ (): Observable<KeyboardInteractivePrompt> { return this.keyboardInteractivePrompt }
     get willDestroy$ (): Observable<void> { return this.willDestroy }
 
     activePrivateKey: russh.KeyPair|null = null
-    authUsername: string|null = null
+    authUsername: string = ''
 
     open = false
 
@@ -270,6 +275,7 @@ export class SSHSession {
         if (!storedPassword) {
             return
         }
+        this.logger.info(`loaded user ${this.authUsername} password from vault`)
 
         if (!this.profile.options.auth || this.profile.options.auth === 'password') {
             const hasSavedPassword = this.allAuthMethods.some(method => method.type === 'saved-password' && method.password === storedPassword)
@@ -427,26 +433,30 @@ export class SSHSession {
 
         // Authentication
 
-        this.authUsername ??= this.profile.options.user
+        this.authUsername = this.profile.options.user
         if (!this.authUsername) {
-            const modal = this.ngbModal.open(PromptModalComponent)
-            modal.componentInstance.prompt = `Username for ${this.profile.options.host}`
-            try {
-                const result = await modal.result.catch(() => null)
-                this.authUsername = result?.value ?? null
-            } catch {
-                this.authUsername = 'root'
+            console.log(`prompt user to input username`)
+            const modal = this.ngbModal.open(PromptCredentialsModalComponent)
+
+            const promptResult = await modal.result.catch(() => {
+                throw new SSHAuthenticationCancelledError()
+            })
+            this.authUsername = promptResult.username
+            if (promptResult.remember && this.authUsername) {
+                this.config.store.profiles.find(p => p.id === this.profile.id).options.user = this.authUsername
+                await this.config.save()
+                this.passwordStorage.savePassword(this.profile, promptResult.password, this.authUsername)
             }
         }
 
-        if (this.authUsername?.startsWith('$')) {
-            try {
-                const result = process.env[this.authUsername.slice(1)]
-                this.authUsername = result ?? this.authUsername
-            } catch {
-                this.authUsername = 'root'
-            }
-        }
+        // if (this.authUsername?.startsWith('$')) {
+        //     try {
+        //         const result = process.env[this.authUsername.slice(1)]
+        //         this.authUsername = result ?? this.authUsername
+        //     } catch {
+        //         this.authUsername = 'root'
+        //     }
+        // }
 
         await this.populateStoredPasswordsForResolvedUsername()
 
@@ -461,10 +471,6 @@ export class SSHSession {
         }
 
         // auth success
-
-        if (this.savedPassword) {
-            this.passwordStorage.savePassword(this.profile, this.savedPassword, this.authUsername ?? undefined)
-        }
 
         for (const fw of this.profile.options.forwardedPorts) {
             this.addPortForward(Object.assign(new ForwardedPort(), fw))
@@ -654,25 +660,22 @@ export class SSHSession {
                 maybeSetRemainingMethods(result)
             }
             if (method.type === 'prompt-password') {
-                const modal = this.ngbModal.open(PromptModalComponent)
-                modal.componentInstance.prompt = `Password for ${this.authUsername}@${this.profile.options.host}`
-                modal.componentInstance.password = true
-                modal.componentInstance.showRememberCheckbox = true
+                const modal = this.ngbModal.open(PromptCredentialsModalComponent)
+                modal.componentInstance.username = this.authUsername
 
+                const promptResult = await modal.result.catch(() => {
+                    throw new SSHAuthenticationCancelledError()
+                })
+                this.authUsername = promptResult.username
+                if (promptResult.remember) {
+                    this.passwordStorage.savePassword(this.profile, promptResult.password, this.authUsername)
+                }
                 try {
-                    const promptResult = await modal.result.catch(() => null)
-                    if (promptResult) {
-                        if (promptResult.remember) {
-                            this.savedPassword = promptResult.value
-                        }
-                        const result = await this.ssh.authenticateWithPassword(this.authUsername, promptResult.value)
-                        if (result instanceof russh.AuthenticatedSSHClient) {
-                            return result
-                        }
-                        maybeSetRemainingMethods(result)
-                    } else {
-                        continue
+                    const result = await this.ssh.authenticateWithPassword(this.authUsername, promptResult.password)
+                    if (result instanceof russh.AuthenticatedSSHClient) {
+                        return result
                     }
+                    maybeSetRemainingMethods(result)
                 } catch (err) {
                     console.error('Failed to authenticateWithPassword', err)
                     continue
@@ -932,17 +935,16 @@ export class SSHSession {
                 ].includes(e.toString())) {
                     await this.passwordStorage.deletePrivateKeyPassword(keyHash)
 
-                    const modal = this.ngbModal.open(PromptModalComponent)
-                    modal.componentInstance.prompt = 'Private key passphrase'
-                    modal.componentInstance.password = true
-                    modal.componentInstance.showRememberCheckbox = true
+                    const modal = this.ngbModal.open(PromptCredentialsModalComponent)
+                    modal.componentInstance.username = this.authUsername
+                    modal.componentInstance.passwordPrompt = 'Private key passphrase:'
 
-                    const result = await modal.result.catch(() => {
-                        throw new Error('Passphrase prompt cancelled')
+                    const promptResult = await modal.result.catch(() => {
+                        throw new SSHAuthenticationCancelledError()
                     })
 
-                    passphrase = result?.value
-                    if (passphrase && result.remember) {
+                    passphrase = promptResult?.password
+                    if (passphrase && promptResult.remember) {
                         this.passwordStorage.savePrivateKeyPassword(keyHash, passphrase)
                     }
                 } else {
