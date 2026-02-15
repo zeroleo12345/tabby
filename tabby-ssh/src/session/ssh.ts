@@ -5,7 +5,7 @@ import stripAnsi from 'strip-ansi'
 import * as shellQuote from 'shell-quote'
 import { Injector } from '@angular/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
-import { ConfigService, FileProvidersService, ProfilesService, NotificationsService, PromptModalComponent, PromptCredentialsModalComponent, LogService, Logger, TranslateService, Platform, HostAppService } from 'tabby-core'
+import { ConfigService, FileProvidersService, NotificationsService, PromptModalComponent, PromptCredentialsModalComponent, LogService, Logger, TranslateService, Platform, HostAppService } from 'tabby-core'
 import { Socket } from 'net'
 import { Subject, Observable } from 'rxjs'
 import { HostKeyPromptModalComponent } from '../components/hostKeyPromptModal.component'
@@ -120,7 +120,6 @@ export class SSHSession {
     private hostApp: HostAppService
     private notifications: NotificationsService
     private fileProviders: FileProvidersService
-    private profileService: ProfilesService
     private config: ConfigService
     private translate: TranslateService
     private knownHosts: SSHKnownHostsService
@@ -139,7 +138,6 @@ export class SSHSession {
         this.notifications = injector.get(NotificationsService)
         this.fileProviders = injector.get(FileProvidersService)
         this.config = injector.get(ConfigService)
-        this.profileService = injector.get(ProfilesService)
         this.translate = injector.get(TranslateService)
         this.knownHosts = injector.get(SSHKnownHostsService)
         this.privateKeyImporters = injector.get(AutoPrivateKeyLocator, [])
@@ -437,7 +435,9 @@ export class SSHSession {
             if (promptResult) {
                 this.authUsername = promptResult.username ?? ''
                 if (promptResult.remember && this.authUsername) {
-                    this.profile.options.user = this.authUsername
+                    const cProfile = this.config.store.profiles.find(p => p.id === this.profile.id)
+                    cProfile.options.user = this.authUsername
+                    await this.config.save()
                     this.passwordStorage.savePassword(this.profile, promptResult.password, this.authUsername)
                 }
             }
