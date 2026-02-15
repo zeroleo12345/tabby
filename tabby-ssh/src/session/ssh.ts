@@ -462,10 +462,6 @@ export class SSHSession {
 
         // auth success
 
-        if (this.savedPassword) {
-            this.passwordStorage.savePassword(this.profile, this.savedPassword, this.authUsername ?? undefined)
-        }
-
         for (const fw of this.profile.options.forwardedPorts) {
             this.addPortForward(Object.assign(new ForwardedPort(), fw))
         }
@@ -654,18 +650,17 @@ export class SSHSession {
                 maybeSetRemainingMethods(result)
             }
             if (method.type === 'prompt-password') {
-                const modal = this.ngbModal.open(PromptModalComponent)
-                modal.componentInstance.prompt = `Password for ${this.authUsername}@${this.profile.options.host}`
-                modal.componentInstance.password = true
-                modal.componentInstance.showRememberCheckbox = true
+                const modal = this.ngbModal.open(PromptCredentialsModalComponent)
+                modal.componentInstance.username = this.authUsername
 
                 try {
                     const promptResult = await modal.result.catch(() => null)
                     if (promptResult) {
+                        this.authUsername = promptResult.username
                         if (promptResult.remember) {
-                            this.savedPassword = promptResult.value
+                            this.passwordStorage.savePassword(this.profile, promptResult.password, this.authUsername)
                         }
-                        const result = await this.ssh.authenticateWithPassword(this.authUsername, promptResult.value)
+                        const result = await this.ssh.authenticateWithPassword(this.authUsername, promptResult.password)
                         if (result instanceof russh.AuthenticatedSSHClient) {
                             return result
                         }

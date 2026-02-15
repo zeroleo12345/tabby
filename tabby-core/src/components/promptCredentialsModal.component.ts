@@ -6,26 +6,33 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap'
     templateUrl: './promptCredentialsModal.component.pug',
 })
 export class PromptCredentialsModalComponent {
-    @Input() value: string
-    @Input() prompt: string|undefined
-    @Input() password: boolean
+    @Input() username: string
+    @Input() password: string
     @Input() remember: boolean
-    @Input() showRememberCheckbox: boolean
-    @ViewChild('input') input: ElementRef
+    @Input() showRememberCheckbox = true
+    @ViewChild('usernameInput') usernameInput: ElementRef
+    @ViewChild('passwordInput') passwordInput: ElementRef
 
     constructor (
         private modalInstance: NgbActiveModal,
     ) { }
 
     ngOnInit (): void {
+        this.username ??= this.username
+        this.password ??= this.password
         setTimeout(() => {
-            this.input.nativeElement.focus()
+            if (!this.username) {
+                this.usernameInput.nativeElement.focus()
+            } else {
+                this.passwordInput.nativeElement.focus()
+            }
         })
     }
 
     ok (): void {
         this.modalInstance.close({
-            value: this.value,
+            username: this.username,
+            password: this.password,
             remember: this.remember,
         })
     }
