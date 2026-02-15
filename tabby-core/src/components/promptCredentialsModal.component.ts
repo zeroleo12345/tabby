@@ -18,9 +18,8 @@ export class PromptCredentialsModalComponent {
     ) { }
 
     ngOnInit (): void {
-        this.username ??= this.username
-        this.password ??= this.password
         setTimeout(() => {
+            console.log(`11111: ${this.username}`)
             if (!this.username) {
                 this.usernameInput.nativeElement.focus()
             } else {
