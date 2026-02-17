@@ -170,12 +170,32 @@ export class HotkeysService {
             }
         }
 
-        console.log(`111 pushKeyEvent eventName: ${eventName}, nativeEvent:`, nativeEvent)
+        let keyTips = `111 pushKeyEvent eventName: ${eventName}, key: ${nativeEvent.key}, code: ${nativeEvent.code}`
+        keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
+        keyTips += nativeEvent.altKey ? ', altKey: true' : ''
+        keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
+        keyTips += nativeEvent.metaKey ? ', metaKey: true' : ''
+        console.log(keyTips)
         const keyName = getKeyName(eventData)
         if (eventName === 'keydown') {
             this.addPressedKey(keyName, eventData)
-            this.recognitionPhase = true
-            this.updateModifiers(eventData)
+            // modified key
+            for (const [prop, key] of Object.entries({
+                ctrlKey: 'Ctrl',
+                metaKey: metaKeyName,
+                altKey: altKeyName,
+                shiftKey: 'Shift',
+            })) {
+                if (!eventData[prop] && this.pressedKeys.has(key)) {
+                    // not pressing this modified key
+                    this.removePressedKey(key)
+                }
+                if (eventData[prop] && !this.pressedKeys.has(key)) {
+                    // pressing this modified key
+                    this.addPressedKey(key, eventData)
+                    this.recognitionPhase = true
+                }
+            }
         }
         if (eventName === 'keyup') {
             if (this.recognitionPhase) {
@@ -338,22 +358,6 @@ export class HotkeysService {
                     .map(async x => x.provide()),
             )
         ).reduce((a, b) => a.concat(b))
-    }
-
-    private updateModifiers (event: KeyEventData) {
-        for (const [prop, key] of Object.entries({
-            ctrlKey: 'Ctrl',
-            metaKey: metaKeyName,
-            altKey: altKeyName,
-            shiftKey: 'Shift',
-        })) {
-            if (!event[prop] && this.pressedKeys.has(key)) {
-                this.removePressedKey(key)
-            }
-            if (event[prop] && !this.pressedKeys.has(key)) {
-                this.addPressedKey(key, event)
-            }
-        }
     }
 
     private emitHotkeyOn (hotkey: string) {
