@@ -28,46 +28,40 @@ const REGEX_LATIN_KEYNAME = /^[A-Za-z]$/
 export type KeyName = string
 export type Keystroke = string
 
-export function getKeyName (event: KeyEventData): KeyName {
+export function getKeyName (event: KeyboardEvent): KeyName {
     // eslint-disable-next-line @typescript-eslint/init-declarations
-    let key: string
-    if (event.key === 'Control') {
-        key = 'Ctrl'
-    } else if (event.key === 'Meta') {
-        key = metaKeyName
-    } else if (event.key === 'Alt') {
-        key = altKeyName
-    } else if (event.key === 'Shift') {
-        key = 'Shift'
-    } else if (event.key === '`') {
-        key = '`'
-    } else if (event.key === '~') {
-        key = '~'
-    } else {
-        key = event.code
-        if (REGEX_LATIN_KEYNAME.test(event.key)) {
-            // Handle Dvorak etc via the reported "character" instead of the scancode
-            key = event.key.toUpperCase()
-        } else {
-            key = key.replace('Key', '')
-            key = key.replace('Arrow', '')
-            key = key.replace('Digit', '')
-            key = {
-                Comma: ',',
-                Period: '.',
-                Slash: '/',
-                Backslash: '\\',
-                IntlBackslash: '`',
-                Minus: '-',
-                Equal: '=',
-                Semicolon: ';',
-                Quote: '\'',
-                BracketLeft: '[',
-                BracketRight: ']',
-            }[key] ?? key
-        }
+    switch (event.key) {
+        case 'Control': return 'Ctrl'
+        case 'Meta': return metaKeyName
+        case 'Alt': return altKeyName
+        case 'Shift': return 'Shift'
+        case '`': return '`'
+        case '~': return '~'
+        default:
+            let key = event.code
+            if (REGEX_LATIN_KEYNAME.test(event.key)) {
+                // Handle Dvorak etc via the reported "character" instead of the scancode
+                key = event.key.toUpperCase()
+            } else {
+                key = key.replace('Key', '')
+                key = key.replace('Arrow', '')
+                key = key.replace('Digit', '')
+                key = {
+                    Comma: ',',
+                    Period: '.',
+                    Slash: '/',
+                    Backslash: '\\',
+                    IntlBackslash: '`',
+                    Minus: '-',
+                    Equal: '=',
+                    Semicolon: ';',
+                    Quote: '\'',
+                    BracketLeft: '[',
+                    BracketRight: ']',
+                }[key] ?? key
+            }
+            return key
     }
-    return key
 }
 
 export function getKeystrokeName (keys: KeyName[]): Keystroke {
