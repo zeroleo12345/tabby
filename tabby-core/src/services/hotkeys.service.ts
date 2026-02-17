@@ -69,7 +69,7 @@ export class HotkeysService {
     private _keyEvent = new Subject<KeyboardEvent>()
     private _key = new Subject<KeyName>()
     private _keystroke = new Subject<Keystroke>()
-    private toggle = 0
+    private toggle = 1
     private hotkeyDescriptions: HotkeyDescription[] = []
     private hotkeyConfig = {}
 
@@ -183,8 +183,6 @@ export class HotkeysService {
             }
             return false
         } else if (eventName === 'keyup') {
-            // TODO
-            // this._keystroke.next(nativeEvent)
             // else {
             //     this.zone.run(() => {
             //         this.emitHotkeyOff(hotkey)
@@ -208,11 +206,12 @@ export class HotkeysService {
     }
 
     matchActiveHotkey (pressedKey: KeyboardEvent): string {
-        if (!this.isEnabled()) {
-            return ''
-        }
         const currentSequence = getKeystrokeName(pressedKey)
         console.log(`111 currentSequence:`, currentSequence)
+        if (!this.isEnabled()) {
+            this._keystroke.next(currentSequence)
+            return ''
+        }
         // console.log(`111 all hotkeys:`, this.hotkeyConfig)
         // TODO use Set or Map for performance improved
         for (const hotkey_id in this.hotkeyConfig) {
@@ -252,7 +251,7 @@ export class HotkeysService {
     }
 
     isEnabled (): boolean {
-        return this.toggle === 0
+        return this.toggle === 1
     }
 
     async getHotkeyDescriptions (): Promise<HotkeyDescription[]> {

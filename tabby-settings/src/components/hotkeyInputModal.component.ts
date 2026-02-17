@@ -55,7 +55,7 @@ export class HotkeyInputModalComponent extends BaseComponent {
         })
         this.subscribeUntilDestroyed(hotkeys.keystroke$, keystroke => {
             this.lastKeyEvent = performance.now()
-            this.value.push(keystroke)
+            this.value = [keystroke]
         })
     }
 
