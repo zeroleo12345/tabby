@@ -170,7 +170,7 @@ export class HotkeysService {
             }
         }
 
-        // console.log(`111 pushKeyEvent eventName: ${eventName}, nativeEvent:`, nativeEvent)
+        console.log(`111 pushKeyEvent eventName: ${eventName}, nativeEvent:`, nativeEvent)
         const keyName = getKeyName(eventData)
         if (eventName === 'keydown') {
             this.addPressedKey(keyName, eventData)
@@ -178,8 +178,8 @@ export class HotkeysService {
             this.updateModifiers(eventData)
         }
         if (eventName === 'keyup') {
-            const keystroke = getKeystrokeName([...this.pressedKeys])
             if (this.recognitionPhase) {
+                const keystroke = getKeystrokeName([...this.pressedKeys])
                 this._keystroke.next(keystroke)
                 this.lastKeystrokes.push({
                     keystroke,
