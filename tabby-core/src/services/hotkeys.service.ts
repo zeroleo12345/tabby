@@ -171,7 +171,7 @@ export class HotkeysService {
             if (this.pressedKey) {
                 let hotkey = this.matchActiveHotkey(this.pressedKey)
                 if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
-                    // only terminal tab focus, hotkey "select-all" work, else return
+                    // only focus on terminal tab, hotkey "select-all" work, else return
                     hotkey = ''
                 }
                 if (hotkey) {
