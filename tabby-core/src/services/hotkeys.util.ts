@@ -64,11 +64,21 @@ export function getKeyName (event: KeyboardEvent): KeyName {
     }
 }
 
-export function getKeystrokeName (keys: KeyName[]): Keystroke {
-    const strictOrdering: KeyName[] = ['Ctrl', metaKeyName, altKeyName, 'Shift']
-    keys = [
-        ...strictOrdering.map(x => keys.find(k => k === x)).filter(x => !!x) as KeyName[],
-        ...keys.filter(k => !strictOrdering.includes(k)),
-    ]
+export function getKeystrokeName (nativeEvent: KeyboardEvent): Keystroke {
+    const keys: KeyName[] = []
+    // const strictOrdering: KeyName[] = ['Ctrl', metaKeyName, altKeyName, 'Shift']
+    if (nativeEvent.ctrlKey) {
+        keys.push('Ctrl')
+    }
+    if (nativeEvent.metaKey) {
+        keys.push(metaKeyName)
+    }
+    if (nativeEvent.altKey) {
+        keys.push(altKeyName)
+    }
+    if (nativeEvent.shiftKey) {
+        keys.push('Shift')
+    }
+    keys.push(getKeyName(nativeEvent))
     return keys.join('-')
 }
