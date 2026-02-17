@@ -169,25 +169,22 @@ export class HotkeysService {
                 this.pressedKey = nativeEvent
             }
             if (this.pressedKey) {
-                return true
+                let hotkey = this.matchActiveHotkey(this.pressedKey)
+                if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
+                    // only terminal tab focus, hotkey "select-all" work, else return
+                    hotkey = ''
+                }
+                if (hotkey) {
+                    this.zone.run(() => {
+                        this.emitHotkeyOn(hotkey)
+                    })
+                    return true
+                }
             }
             return false
         } else if (eventName === 'keyup') {
-            if (!this.pressedKey) {
-                return false
-            }
             // TODO
             // this._keystroke.next(nativeEvent)
-            let hotkey = this.matchActiveHotkey(this.pressedKey)
-            if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
-                // only terminal tab focus, hotkey "select-all" work, else return
-                hotkey = ''
-            }
-            if (hotkey) {
-                this.zone.run(() => {
-                    this.emitHotkeyOn(hotkey)
-                })
-            }
             // else {
             //     this.zone.run(() => {
             //         this.emitHotkeyOff(hotkey)
@@ -216,7 +213,7 @@ export class HotkeysService {
         }
         const currentSequence = getKeystrokeName(pressedKey)
         console.log(`111 currentSequence:`, currentSequence)
-        console.log(`111 all hotkeys:`, this.hotkeyConfig)
+        // console.log(`111 all hotkeys:`, this.hotkeyConfig)
         for (const hotkey_id in this.hotkeyConfig) {
             for (const sequence of this.hotkeyConfig[hotkey_id]) {
                 // 遍历 hotkeys[] 数组内每一个hotkey, 如 Alt-O
