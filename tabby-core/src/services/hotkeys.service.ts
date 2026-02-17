@@ -109,8 +109,8 @@ export class HotkeysService {
     }
 
     propagationKeyEventHandler (eventName: string, nativeEvent: KeyboardEvent): boolean {
-        const isMatch = this.pushKeyEvent(eventName, nativeEvent)
-        if (isMatch) {
+        const isHotkey = this.isHotkeyEvent(eventName, nativeEvent)
+        if (isHotkey) {
             // console.log(`111 hotkey matched. preventDefault and stopPropagation:`, nativeEvent)
             nativeEvent.preventDefault()
             nativeEvent.stopPropagation()
@@ -140,13 +140,13 @@ export class HotkeysService {
      * @param nativeEvent event object, https://developer.mozilla.org/zh-CN/docs/Web/API/KeyboardEvent
      * @return true : preventDefault();
      */
-    pushKeyEvent (eventName: string, nativeEvent: KeyboardEvent): boolean {
+    isHotkeyEvent (eventName: string, nativeEvent: KeyboardEvent): boolean {
         if (nativeEvent.timeStamp === this.lastEventTimestamp) {
             return false
         }
         this.lastEventTimestamp = nativeEvent.timeStamp
 
-        let keyTips = `111 pushKeyEvent eventName: ${eventName}, code: ${nativeEvent.code}`
+        let keyTips = `111 isHotkeyEvent eventName: ${eventName}, code: ${nativeEvent.code}`
         keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
         keyTips += nativeEvent.altKey ? ', altKey: true' : ''
         keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
@@ -199,12 +199,12 @@ export class HotkeysService {
             //     !['Ctrl', 'Shift', altKeyName, metaKeyName, 'Enter'].includes(keyName)
             // ) {
             //     // macOS will swallow non-modified keyups if Cmd is held down
-            //     this.pushKeyEvent('keyup', nativeEvent)
+            //     this.isHotkeyEvent('keyup', nativeEvent)
             // }
             this.pressedKey = null
             return true
         }
-        return true
+        return false
     }
 
     matchActiveHotkey (pressedKey: KeyboardEvent): string {
@@ -214,6 +214,7 @@ export class HotkeysService {
         const currentSequence = getKeystrokeName(pressedKey)
         console.log(`111 currentSequence:`, currentSequence)
         // console.log(`111 all hotkeys:`, this.hotkeyConfig)
+        // TODO use Set or Map for performance improved
         for (const hotkey_id in this.hotkeyConfig) {
             for (const sequence of this.hotkeyConfig[hotkey_id]) {
                 // 遍历 hotkeys[] 数组内每一个hotkey, 如 Alt-O
