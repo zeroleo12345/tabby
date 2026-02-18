@@ -71,7 +71,7 @@ export class HotkeysService {
     private _keystroke = new Subject<Keystroke>()
     private toggle = 1
     private hotkeyDescriptions: HotkeyDescription[] = []
-    private hotkeyConfig = {}
+    private hotkeyConfig: Record<string, any> = {}
 
     private pressedKey: KeyboardEvent|null
     private lastEventTimestamp = 0
@@ -146,7 +146,7 @@ export class HotkeysService {
         }
         this.lastEventTimestamp = nativeEvent.timeStamp
 
-        let keyTips = `111 isHotkeyEvent eventName: ${eventName}, code: ${nativeEvent.code}`
+        let keyTips = `111 eventName: ${eventName}, code: ${nativeEvent.code}`
         keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
         keyTips += nativeEvent.altKey ? ', altKey: true' : ''
         keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
@@ -213,25 +213,7 @@ export class HotkeysService {
             return ''
         }
         // console.log(`111 all hotkeys:`, this.hotkeyConfig)
-        // TODO use Set or Map for performance improved
-        for (const hotkey_id in this.hotkeyConfig) {
-            for (const sequence of this.hotkeyConfig[hotkey_id]) {
-                // 遍历 hotkeys[] 数组内每一个hotkey, 如 Alt-O
-                // console.log(`111 hotkey name: ${hotkey_id}`)
-                // console.log(`111 input: ${currentSequence}, ${currentSequence.length})
-                // console.log(`111 config: ${sequence}, ${sequence.length})
-                if (currentSequence.length < sequence.length) {
-                    continue
-                }
-                // console.log(`111 config: ${sequence}, length: ${sequence.length})
-                for (const item of sequence) {
-                    if (currentSequence === item) {
-                        return hotkey_id
-                    }
-                }
-            }
-        }
-        return ''
+        return this.hotkeyConfig[currentSequence] ?? ''
     }
 
     clearCurrentKeystrokes (): void {
@@ -278,27 +260,28 @@ export class HotkeysService {
     }
 
     private getHotkeysConfigRecursive (branch: any) {
-        const keys = {}
-        for (const key in branch) {
-            let value = branch[key]
-            if (value instanceof Object && !(value instanceof Array)) {
-                const subkeys = this.getHotkeysConfigRecursive(value)
-                for (const subkey in subkeys) {
-                    keys[key + '.' + subkey] = subkeys[subkey]
-                }
+        const keys = {} // {'Ctrl-C' : hotkey_id}
+        for (const hotkey_id in branch) {
+            let hotkeys = branch[hotkey_id]
+            if (hotkeys instanceof Object && !(hotkeys instanceof Array)) {
+                // const subkeys = this.getHotkeysConfigRecursive(hotkeys)
+                // for (const subkey in subkeys) {
+                //     keys[key + '.' + subkey] = subkeys[subkey]
+                // }
             } else {
-                if (typeof value === 'string') {
-                    value = [value]
-                }
-                if (!(value instanceof Array)) {
+                console.log(`111 hotkeys:`, hotkeys)
+                if (typeof hotkeys === 'string') {
+                    keys[hotkeys] = hotkey_id
                     continue
                 }
-                if (value.length > 0) {
-                    value = value.map((item: string | string[]) => typeof item === 'string' ? [item] : item)
-                    keys[key] = value
+                if (hotkeys.length > 0) {
+                    for (const [index, hotkey] of Object.entries(hotkeys)) {
+                        keys[hotkey] = hotkey_id
+                    }
                 }
             }
         }
+        // console.log(`getHotkeysConfig:`, keys)
         return keys
     }
 }
