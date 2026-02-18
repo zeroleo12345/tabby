@@ -249,7 +249,7 @@ export class HotkeysService {
     private getHotkeysConfigRecursive (branch: Record<string, any>) {
         const keys: Record<string, any> = {} // {'Ctrl-C' : hotkey_id}
         for (const hotkey_id in branch) {
-            let hotkeys = branch[hotkey_id]
+            const hotkeys = branch[hotkey_id]
             if (hotkeys instanceof Array) {
                 if (hotkeys.length > 0) {
                     for (const [index, hotkey] of Object.entries(hotkeys)) {
