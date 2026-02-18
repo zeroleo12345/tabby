@@ -1,21 +1,10 @@
 import { Injectable, Inject, NgZone, EventEmitter } from '@angular/core'
 import { Observable, Subject, filter } from 'rxjs'
 import { HotkeyDescription, HotkeyProvider } from '../api/hotkeyProvider'
-import { KeyEventData, getKeyName, Keystroke, KeyName, getKeystrokeName, metaKeyName, altKeyName } from './hotkeys.util'
+import { Keystroke, KeyName, getKeystrokeName } from './hotkeys.util'
 import { ConfigService } from './config.service'
-import { HostAppService, Platform } from '../api/hostApp'
+import { HostAppService } from '../api/hostApp'
 import { deprecate } from 'util'
-
-export interface PartialHotkeyMatch {
-    id: string
-    strokes: string[]
-    matchedLength: number
-}
-
-interface PastKeystroke {
-    keystroke: Keystroke
-    time: number
-}
 
 @Injectable({ providedIn: 'root' })
 export class HotkeysService {
@@ -69,16 +58,10 @@ export class HotkeysService {
     private _keyEvent = new Subject<KeyboardEvent>()
     private _key = new Subject<KeyName>()
     private _keystroke = new Subject<Keystroke>()
-    private disabledLevel = 0
+    private toggle = 1
     private hotkeyDescriptions: HotkeyDescription[] = []
-    private hotkeyConfig = {}
+    private hotkeyConfig: Record<string, any> = {}
 
-    private pressedKeys = new Set<KeyName>()
-    private pressedKeyTimestamps = new Map<KeyName, number>()
-    private pressedHotkey: string|null = null
-    private pressedKeystroke: Keystroke|null = null
-    private lastKeystrokes: PastKeystroke[] = []
-    private recognitionPhase = true
     private lastEventTimestamp = 0
 
     private constructor (
@@ -107,6 +90,7 @@ export class HotkeysService {
         // deprecated
         // this.hotkey$.subscribe(h => this.matchedHotkey.emit(h))
         this.matchedHotkey.subscribe(() => {
+            // trigger from Quick command plugin
             this.hotkeyConfig = this.getHotkeysConfig()
         })
         this.keyEvent$.subscribe(h => this.key.next(h))
@@ -114,8 +98,8 @@ export class HotkeysService {
     }
 
     propagationKeyEventHandler (eventName: string, nativeEvent: KeyboardEvent): boolean {
-        const isMatch = this.pushKeyEvent(eventName, nativeEvent)
-        if (isMatch) {
+        const isHotkey = this.isHotkeyEvent(eventName, nativeEvent)
+        if (isHotkey) {
             // console.log(`111 hotkey matched. preventDefault and stopPropagation:`, nativeEvent)
             nativeEvent.preventDefault()
             nativeEvent.stopPropagation()
@@ -142,177 +126,85 @@ export class HotkeysService {
      * Adds a new key event to the buffer
      *
      * @param eventName DOM event name
-     * @param nativeEvent event object
+     * @param nativeEvent event object, https://developer.mozilla.org/zh-CN/docs/Web/API/KeyboardEvent
+     * @return true : preventDefault();
      */
-    pushKeyEvent (eventName: string, nativeEvent: KeyboardEvent): boolean {
+    isHotkeyEvent (eventName: string, nativeEvent: KeyboardEvent): boolean {
         if (nativeEvent.timeStamp === this.lastEventTimestamp) {
             return false
         }
-
-        let isMatch = false
-        nativeEvent['event'] = eventName
-
-        const eventData = {
-            ctrlKey: nativeEvent.ctrlKey,
-            metaKey: nativeEvent.metaKey,
-            altKey: nativeEvent.altKey,
-            shiftKey: nativeEvent.shiftKey,
-            code: nativeEvent.code,
-            key: nativeEvent.key,
-            eventName: eventName,
-            time: nativeEvent.timeStamp,
-            registrationTime: performance.now(),
-        }
-
-        for (const [key, time] of this.pressedKeyTimestamps.entries()) {
-            if (time < performance.now() - 2000) {
-                this.removePressedKey(key)
-            }
-        }
-
-        // console.log(`111 pushKeyEvent eventName: ${eventName}, nativeEvent:`, nativeEvent)
-        const keyName = getKeyName(eventData)
-        if (eventName === 'keydown') {
-            this.addPressedKey(keyName, eventData)
-            this.recognitionPhase = true
-            this.updateModifiers(eventData)
-        }
-        if (eventName === 'keyup') {
-            const keystroke = getKeystrokeName([...this.pressedKeys])
-            if (this.recognitionPhase) {
-                this._keystroke.next(keystroke)
-                this.lastKeystrokes.push({
-                    keystroke,
-                    time: performance.now(),
-                })
-                this.recognitionPhase = false
-            }
-            this.pressedKeys.clear()
-            this.pressedKeyTimestamps.clear()
-            this.removePressedKey(keyName)
-        }
-
-        if (this.pressedKeys.size) {
-            this.pressedKeystroke = getKeystrokeName([...this.pressedKeys])
-        } else {
-            this.pressedKeystroke = null
-        }
-
-        const hotkey = this.matchActiveHotkey(eventName, false)
-        // console.log(`111 matchActiveHotkey return value: ${hotkey}`)
-        if (hotkey) {
-            if (this.recognitionPhase) {
-                this.zone.run(() => {
-                    this.emitHotkeyOn(hotkey)
-                })
-                isMatch = true
-            }
-        } else if (this.pressedHotkey) {
-            this.zone.run(() => {
-                if (this.pressedHotkey) {
-                    this.emitHotkeyOff(this.pressedHotkey)
-                }
-            })
-        }
-
-        this.zone.run(() => {
-            this._key.next(getKeyName(eventData))
-        })
-
-        if (process.platform === 'darwin' && eventData.metaKey && eventName === 'keydown' && !['Ctrl', 'Shift', altKeyName, metaKeyName, 'Enter'].includes(keyName)) {
-            // macOS will swallow non-modified keyups if Cmd is held down
-            this.pushKeyEvent('keyup', nativeEvent)
-        }
-
         this.lastEventTimestamp = nativeEvent.timeStamp
-        return isMatch
-    }
 
-    getCurrentKeystrokes (): Keystroke[] {
-        if (!this.pressedKeystroke) {
-            return []
-        }
-        return [...this.lastKeystrokes.map(x => x.keystroke), this.pressedKeystroke]
-    }
+        // let keyTips = `111 eventName: ${eventName}, code: ${nativeEvent.code}`
+        // keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
+        // keyTips += nativeEvent.altKey ? ', altKey: true' : ''
+        // keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
+        // keyTips += nativeEvent.metaKey ? ', metaKey: true' : ''
+        // console.log(keyTips)
 
-    matchActiveHotkey (eventName: string, partial = false): string|null {
-        if (!this.isEnabled() || !this.pressedKeystroke) {
-            // console.log(`111 not hotkey matched, isEnabled: ${this.isEnabled()}, pressedKeystroke: ${this.pressedKeystroke}`)
-            return null
-        }
-        if (eventName === 'keyup') {
-            return null
-        }
-        const matches: {
-            id: string,
-            sequence: string[],
-        }[] = []
-
-        const currentSequence = this.getCurrentKeystrokes()
-
-        // console.log(`111 all hotkeys:`, config)
-        for (const id in this.hotkeyConfig) {
-            for (const sequence of this.hotkeyConfig[id]) {
-                // console.log(`111 hotkey name: ${id}`)
-                // console.log(`111 input: ${currentSequence}, ${currentSequence.length})
-                // console.log(`111 config: ${sequence}, ${sequence.length})
-                if (currentSequence.length < sequence.length) {
-                    // console.log(`111 continue-1`)
-                    continue
-                }
-                // console.log(`111 pressedKeystroke: ${this.pressedKeystroke})
-                // console.log(`111 config: ${sequence}, length: ${sequence.length})
-                if (sequence[sequence.length - 1] !== this.pressedKeystroke) {
-                    // console.log(`111 continue-2`)
-                    continue
-                }
-
-                let lastIndex = 0
-                let matched = true
-                for (const item of sequence) {
-                    const nextOffset = currentSequence.slice(lastIndex).findIndex(
-                        x => x.toLowerCase() === item.toLowerCase(),
-                    )
-                    if (nextOffset === -1) {
-                        matched = false
-                        // console.log(`111 not match! break`)
-                        break
-                    }
-                    lastIndex += nextOffset
-                }
-
-                // console.log(`111 lastIndex: ${lastIndex})
-                if (partial ? lastIndex > 0 : matched) {
-                    // console.log(`111 push`)
-                    matches.push({
-                        id,
-                        sequence,
-                    })
-                }
+        if (eventName === 'keydown') {
+            // (f up) (Meta up) (Meta+f down) (Meta down) (Alt up) (Alt down)
+            if (nativeEvent.ctrlKey && nativeEvent.key != 'Control') {
+                return this.matchActiveHotkey(nativeEvent)
             }
-        }
+            if (nativeEvent.metaKey && nativeEvent.key != 'Meta') {
+                return this.matchActiveHotkey(nativeEvent)
+            }
+            if (nativeEvent.altKey && nativeEvent.key != 'Alt') {
+                return this.matchActiveHotkey(nativeEvent)
+            }
+            if (nativeEvent.shiftKey && nativeEvent.key != 'Shift') {
+                return this.matchActiveHotkey(nativeEvent)
+            }
+            return false
+        } else if (eventName === 'keyup') {
+            // else {
+            //     this.zone.run(() => {
+            //         this.emitHotkeyOff(hotkey)
+            //     })
+            // }
 
-        // console.log(`111 matches: ${matches}`)
-        matches.sort((a, b) => b.sequence.length - a.sequence.length)
-        if (!matches.length) {
-            return null
+            // this.zone.run(() => {
+            //     this._key.next(keyName)
+            // })
+
+            // if (process.platform === 'darwin' && nativeEvent.metaKey && eventName === 'keydown' &&
+            //     !['Ctrl', 'Shift', altKeyName, metaKeyName, 'Enter'].includes(keyName)
+            // ) {
+            //     // macOS will swallow non-modified keyups if Cmd is held down
+            //     this.isHotkeyEvent('keyup', nativeEvent)
+            // }
+            return true
         }
-        if (matches[0].sequence.length > 1) {
-            this.clearCurrentKeystrokes()
+        return false
+    }
+
+    /**
+     * @param nativeEvent event object, https://developer.mozilla.org/zh-CN/docs/Web/API/KeyboardEvent
+     * @return true : preventDefault();
+     */
+    matchActiveHotkey (nativeEvent: KeyboardEvent): boolean {
+        const currentSequence = getKeystrokeName(nativeEvent)
+        // console.log(`111 currentSequence:`, currentSequence)
+        if (!this.isEnabled()) {
+            this._keystroke.next(currentSequence)
+            return false
         }
-        if (['select-all'].includes(matches[0].id) && this.contextKey['terminalTabFocus'] === false) {
-            // only terminal tab focus, hotkey "select-all" work, else return null
-            return null
+        const hotkey = this.hotkeyConfig[currentSequence] ?? null
+        if (!hotkey) {
+            return false
         }
-        return matches[0].id
+        if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
+            // only focus on terminal tab, hotkey "select-all" work, else return
+            return false
+        }
+        this.zone.run(() => {
+            this.emitHotkeyOn(hotkey)
+        })
+        return true
     }
 
     clearCurrentKeystrokes (): void {
-        this.lastKeystrokes = []
-        this.pressedKeys.clear()
-        this.pressedKeyTimestamps.clear()
-        this.pressedKeystroke = null
-        this.pressedHotkey = null
     }
 
     getHotkeyDescription (id: string): HotkeyDescription {
@@ -320,15 +212,15 @@ export class HotkeysService {
     }
 
     enable (): void {
-        this.disabledLevel--
+        this.toggle = 1
     }
 
     disable (): void {
-        this.disabledLevel++
+        this.toggle = 0
     }
 
     isEnabled (): boolean {
-        return this.disabledLevel === 0
+        return this.toggle === 1
     }
 
     async getHotkeyDescriptions (): Promise<HotkeyDescription[]> {
@@ -340,76 +232,38 @@ export class HotkeysService {
         ).reduce((a, b) => a.concat(b))
     }
 
-    private updateModifiers (event: KeyEventData) {
-        for (const [prop, key] of Object.entries({
-            ctrlKey: 'Ctrl',
-            metaKey: metaKeyName,
-            altKey: altKeyName,
-            shiftKey: 'Shift',
-        })) {
-            if (!event[prop] && this.pressedKeys.has(key)) {
-                this.removePressedKey(key)
-            }
-            if (event[prop] && !this.pressedKeys.has(key)) {
-                this.addPressedKey(key, event)
-            }
-        }
-    }
-
     private emitHotkeyOn (hotkey: string) {
-        if (this.pressedHotkey) {
-            if (this.pressedHotkey !== hotkey) {
-                this.emitHotkeyOff(this.pressedHotkey)
-            }
-        }
-        console.debug('Matched hotkey', hotkey)
+        console.info(`Matched hotkey '${hotkey}'`)
         this._hotkey.next(hotkey)
-        this.pressedHotkey = hotkey
-        this.recognitionPhase = false
     }
 
     private emitHotkeyOff (hotkey: string) {
-        console.debug('Unmatched hotkey', hotkey)
+        console.info(`Unmatched hotkey '${hotkey}'`)
         this._hotkeyOff.next(hotkey)
-        this.pressedHotkey = null
     }
 
     private getHotkeysConfig () {
         return this.getHotkeysConfigRecursive(this.config.store.hotkeys)
     }
 
-    private getHotkeysConfigRecursive (branch: any) {
-        const keys = {}
-        for (const key in branch) {
-            let value = branch[key]
-            if (value instanceof Object && !(value instanceof Array)) {
-                const subkeys = this.getHotkeysConfigRecursive(value)
-                for (const subkey in subkeys) {
-                    keys[key + '.' + subkey] = subkeys[subkey]
+    private getHotkeysConfigRecursive (branch: Record<string, any>) {
+        const keys: Record<string, any> = {} // {'Ctrl-C' : hotkey_id}
+        for (const hotkey_id in branch) {
+            const hotkeys = branch[hotkey_id]
+            if (hotkeys instanceof Array) {
+                if (hotkeys.length > 0) {
+                    for (const [index, hotkey] of Object.entries(hotkeys)) {
+                        keys[hotkey] = hotkey_id
+                    }
                 }
             } else {
-                if (typeof value === 'string') {
-                    value = [value]
-                }
-                if (!(value instanceof Array)) {
-                    continue
-                }
-                if (value.length > 0) {
-                    value = value.map((item: string | string[]) => typeof item === 'string' ? [item] : item)
-                    keys[key] = value
-                }
+                // const subkeys = this.getHotkeysConfigRecursive(hotkeys)
+                // for (const subkey in subkeys) {
+                //     keys[key + '.' + subkey] = subkeys[subkey]
+                // }
             }
         }
+        // console.log(`111 getHotkeysConfig:`, keys)
         return keys
-    }
-
-    private addPressedKey (keyName: KeyName, eventData: KeyEventData) {
-        this.pressedKeys.add(keyName)
-        this.pressedKeyTimestamps.set(keyName, eventData.registrationTime)
-    }
-
-    private removePressedKey (key: KeyName) {
-        this.pressedKeys.delete(key)
-        this.pressedKeyTimestamps.delete(key)
     }
 }
