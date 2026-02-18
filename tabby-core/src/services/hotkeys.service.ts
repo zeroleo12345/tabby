@@ -6,17 +6,6 @@ import { ConfigService } from './config.service'
 import { HostAppService } from '../api/hostApp'
 import { deprecate } from 'util'
 
-export interface PartialHotkeyMatch {
-    id: string
-    strokes: string[]
-    matchedLength: number
-}
-
-interface PastKeystroke {
-    keystroke: Keystroke
-    time: number
-}
-
 @Injectable({ providedIn: 'root' })
 export class HotkeysService {
     /** @hidden @deprecated */
