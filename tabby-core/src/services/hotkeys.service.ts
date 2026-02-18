@@ -102,6 +102,7 @@ export class HotkeysService {
         // deprecated
         // this.hotkey$.subscribe(h => this.matchedHotkey.emit(h))
         this.matchedHotkey.subscribe(() => {
+            // trigger from Quick command plugin
             this.hotkeyConfig = this.getHotkeysConfig()
         })
         this.keyEvent$.subscribe(h => this.key.next(h))
