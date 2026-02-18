@@ -1,9 +1,9 @@
 import { Injectable, Inject, NgZone, EventEmitter } from '@angular/core'
 import { Observable, Subject, filter } from 'rxjs'
 import { HotkeyDescription, HotkeyProvider } from '../api/hotkeyProvider'
-import { getKeyName, Keystroke, KeyName, metaKeyName, altKeyName, getKeystrokeName, KeyEventData } from './hotkeys.util'
+import { Keystroke, KeyName, getKeystrokeName } from './hotkeys.util'
 import { ConfigService } from './config.service'
-import { HostAppService, Platform } from '../api/hostApp'
+import { HostAppService } from '../api/hostApp'
 import { deprecate } from 'util'
 
 export interface PartialHotkeyMatch {
