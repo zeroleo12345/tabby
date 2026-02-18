@@ -250,21 +250,17 @@ export class HotkeysService {
         const keys: Record<string, any> = {} // {'Ctrl-C' : hotkey_id}
         for (const hotkey_id in branch) {
             let hotkeys = branch[hotkey_id]
-            if (hotkeys instanceof Object && !(hotkeys instanceof Array)) {
-                // const subkeys = this.getHotkeysConfigRecursive(hotkeys)
-                // for (const subkey in subkeys) {
-                //     keys[key + '.' + subkey] = subkeys[subkey]
-                // }
-            } else {
-                if (typeof hotkeys === 'string') {
-                    keys[hotkeys] = hotkey_id
-                    continue
-                }
+            if (hotkeys instanceof Array) {
                 if (hotkeys.length > 0) {
                     for (const [index, hotkey] of Object.entries(hotkeys) as [string, string][]) {
                         keys[hotkey] = hotkey_id
                     }
                 }
+            } else {
+                // const subkeys = this.getHotkeysConfigRecursive(hotkeys)
+                // for (const subkey in subkeys) {
+                //     keys[key + '.' + subkey] = subkeys[subkey]
+                // }
             }
         }
         // console.log(`111 getHotkeysConfig:`, keys)
