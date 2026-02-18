@@ -73,7 +73,6 @@ export class HotkeysService {
     private hotkeyDescriptions: HotkeyDescription[] = []
     private hotkeyConfig: Record<string, any> = {}
 
-    private pressedKey: KeyboardEvent|null
     private lastEventTimestamp = 0
 
     private constructor (
@@ -153,34 +152,20 @@ export class HotkeysService {
         // keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
         // keyTips += nativeEvent.metaKey ? ', metaKey: true' : ''
         // console.log(keyTips)
-        // console.log('pressedKey: ', this.pressedKey)
 
         if (eventName === 'keydown') {
             // (f up) (Meta up) (Meta+f down) (Meta down) (Alt up) (Alt down)
             if (nativeEvent.ctrlKey && nativeEvent.key != 'Control') {
-                this.pressedKey = nativeEvent
+                return this.matchActiveHotkey(nativeEvent)
             }
             if (nativeEvent.metaKey && nativeEvent.key != 'Meta') {
-                this.pressedKey = nativeEvent
+                return this.matchActiveHotkey(nativeEvent)
             }
             if (nativeEvent.altKey && nativeEvent.key != 'Alt') {
-                this.pressedKey = nativeEvent
+                return this.matchActiveHotkey(nativeEvent)
             }
             if (nativeEvent.shiftKey && nativeEvent.key != 'Shift') {
-                this.pressedKey = nativeEvent
-            }
-            if (this.pressedKey) {
-                let hotkey = this.matchActiveHotkey(this.pressedKey)
-                if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
-                    // only focus on terminal tab, hotkey "select-all" work, else return
-                    hotkey = ''
-                }
-                if (hotkey) {
-                    this.zone.run(() => {
-                        this.emitHotkeyOn(hotkey)
-                    })
-                    return true
-                }
+                return this.matchActiveHotkey(nativeEvent)
             }
             return false
         } else if (eventName === 'keyup') {
@@ -200,24 +185,37 @@ export class HotkeysService {
             //     // macOS will swallow non-modified keyups if Cmd is held down
             //     this.isHotkeyEvent('keyup', nativeEvent)
             // }
-            this.pressedKey = null
             return true
         }
         return false
     }
 
-    matchActiveHotkey (pressedKey: KeyboardEvent): string {
-        const currentSequence = getKeystrokeName(pressedKey)
+    /**
+     * @param nativeEvent event object, https://developer.mozilla.org/zh-CN/docs/Web/API/KeyboardEvent
+     * @return true : preventDefault();
+     */
+    matchActiveHotkey (nativeEvent: KeyboardEvent): boolean {
+        const currentSequence = getKeystrokeName(nativeEvent)
         // console.log(`111 currentSequence:`, currentSequence)
         if (!this.isEnabled()) {
             this._keystroke.next(currentSequence)
-            return ''
+            return false
         }
-        return this.hotkeyConfig[currentSequence] ?? ''
+        const hotkey = this.hotkeyConfig[currentSequence] ?? null
+        if (!hotkey) {
+            return false
+        }
+        if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
+            // only focus on terminal tab, hotkey "select-all" work, else return
+            return false
+        }
+        this.zone.run(() => {
+            this.emitHotkeyOn(hotkey)
+        })
+        return true
     }
 
     clearCurrentKeystrokes (): void {
-        this.pressedKey = null
     }
 
     getHotkeyDescription (id: string): HotkeyDescription {
@@ -260,7 +258,7 @@ export class HotkeysService {
     }
 
     private getHotkeysConfigRecursive (branch: any) {
-        const keys = {} // {'Ctrl-C' : hotkey_id}
+        const keys: Record<string, any> = {} // {'Ctrl-C' : hotkey_id}
         for (const hotkey_id in branch) {
             let hotkeys = branch[hotkey_id]
             if (hotkeys instanceof Object && !(hotkeys instanceof Array)) {
@@ -274,7 +272,7 @@ export class HotkeysService {
                     continue
                 }
                 if (hotkeys.length > 0) {
-                    for (const [index, hotkey] of Object.entries(hotkeys)) {
+                    for (const [index, hotkey] of Object.entries(hotkeys) as [string, string][]) {
                         keys[hotkey] = hotkey_id
                     }
                 }
