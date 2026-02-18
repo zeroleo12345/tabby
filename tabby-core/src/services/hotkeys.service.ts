@@ -146,13 +146,13 @@ export class HotkeysService {
         }
         this.lastEventTimestamp = nativeEvent.timeStamp
 
-        let keyTips = `111 eventName: ${eventName}, code: ${nativeEvent.code}`
-        keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
-        keyTips += nativeEvent.altKey ? ', altKey: true' : ''
-        keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
-        keyTips += nativeEvent.metaKey ? ', metaKey: true' : ''
-        console.log(keyTips)
-        console.log('pressedKey: ', this.pressedKey)
+        // let keyTips = `111 eventName: ${eventName}, code: ${nativeEvent.code}`
+        // keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
+        // keyTips += nativeEvent.altKey ? ', altKey: true' : ''
+        // keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
+        // keyTips += nativeEvent.metaKey ? ', metaKey: true' : ''
+        // console.log(keyTips)
+        // console.log('pressedKey: ', this.pressedKey)
 
         if (eventName === 'keydown') {
             // (f up) (Meta up) (Meta+f down) (Meta down) (Alt up) (Alt down)
@@ -207,12 +207,11 @@ export class HotkeysService {
 
     matchActiveHotkey (pressedKey: KeyboardEvent): string {
         const currentSequence = getKeystrokeName(pressedKey)
-        console.log(`111 currentSequence:`, currentSequence)
+        // console.log(`111 currentSequence:`, currentSequence)
         if (!this.isEnabled()) {
             this._keystroke.next(currentSequence)
             return ''
         }
-        // console.log(`111 all hotkeys:`, this.hotkeyConfig)
         return this.hotkeyConfig[currentSequence] ?? ''
     }
 
@@ -269,7 +268,6 @@ export class HotkeysService {
                 //     keys[key + '.' + subkey] = subkeys[subkey]
                 // }
             } else {
-                console.log(`111 hotkeys:`, hotkeys)
                 if (typeof hotkeys === 'string') {
                     keys[hotkeys] = hotkey_id
                     continue
@@ -281,7 +279,7 @@ export class HotkeysService {
                 }
             }
         }
-        // console.log(`getHotkeysConfig:`, keys)
+        // console.log(`111 getHotkeysConfig:`, keys)
         return keys
     }
 }
