@@ -16,7 +16,7 @@ import { SSHAlgorithmType, SSHProfile, AutoPrivateKeyLocator, PortForwardType } 
 import { ForwardedPort } from './forwards'
 import { X11Socket } from './x11'
 import { supportedAlgorithms } from '../algorithms'
-import * as russh from 'russh'
+import * as russh from 'rustssh2'
 
 const WINDOWS_OPENSSH_AGENT_PIPE = '\\\\.\\pipe\\openssh-ssh-agent'
 
