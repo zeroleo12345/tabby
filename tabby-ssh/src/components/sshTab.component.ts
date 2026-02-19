@@ -1,4 +1,4 @@
-import * as russh from 'russh'
+import * as russh from 'rustssh2'
 import { marker as _ } from '@biesbjerg/ngx-translate-extract-marker'
 import colors from 'ansi-colors'
 import { Component, Injector, HostListener } from '@angular/core'

@@ -4084,10 +4084,10 @@ run-queue@^1.0.0, run-queue@^1.0.3:
   dependencies:
     aproba "^1.1.1"
 
-russh@0.1.34:
-  version "0.1.34"
-  resolved "https://registry.yarnpkg.com/russh/-/russh-0.1.34.tgz#d6246dc74eb61a74ee34fef64bb3bb8d4f251701"
-  integrity sha512-hHUdP/Wai1UydUzVi7jbzwoagZAHujd/+V76VDVxfEVYo0pU1De3CPe920e01nQRdUTIFdatRwODXqvaI6Ma4A==
+rustssh2@^9.0.0:
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/rustssh2/-/rustssh2-9.0.0.tgz#5dca1d3a09369c9499205c3457d40a5695d2260e"
+  integrity sha512-cNw89h3p4/0dCsuFUoRZGLHQs2J2ZdsAzCKzASSoKcBUXfdGRD4nF1fLUZ/aB+DIRCfRsPS9E23pgtxuSFkbeg==
   dependencies:
     "@napi-rs/cli" "^2.18.3"
 

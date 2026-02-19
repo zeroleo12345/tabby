@@ -157,7 +157,7 @@ export default options => {
             'os',
             'path',
             'readline',
-            'russh',
+            'rustssh2',
             '@luminati-io/socksv5',
             'stream',
             'windows-native-registry',
