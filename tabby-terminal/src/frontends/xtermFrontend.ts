@@ -279,6 +279,10 @@ export class XTermFrontend extends Frontend {
         this.ready.complete()
 
         this.xterm.loadAddon(this.search)
+        // xterm 6 addon-search updates matches on every onWriteParsed event.
+        // Keep legacy behavior by disabling automatic incremental refresh.
+        const searchAddon = this.search as any
+        searchAddon._updateMatches = () => {}
 
         this.search.onDidChangeResults(state => {
             this.searchState = state

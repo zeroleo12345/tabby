@@ -156,6 +156,9 @@ export class HotkeysService {
             if (nativeEvent.shiftKey && nativeEvent.key != 'Shift') {
                 return this.matchActiveHotkey(nativeEvent)
             }
+            if (['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'].includes(nativeEvent.key)) {
+                return this.matchActiveHotkey(nativeEvent)
+            }
             return false
         } else if (eventName === 'keyup') {
             // else {
