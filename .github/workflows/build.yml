@@ -216,7 +216,6 @@ jobs:
           generate_release_notes: false
           files: |
             dist/**/*.dmg
-            dist/**/*.zip
             dist/**/*.exe
             dist/**/*.AppImage
             dist/**/*.deb
