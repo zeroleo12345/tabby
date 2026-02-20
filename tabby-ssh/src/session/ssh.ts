@@ -421,15 +421,15 @@ export class SSHSession {
         })
 
         // this.previouslyDisconnected = false
-        // this.ssh.disconnect$.subscribe(() => {
-        //     if (!this.previouslyDisconnected) {
-        //         this.previouslyDisconnected = true
-        //         // Let service messages drain
-        //         setTimeout(() => {
-        //             this.destroy()
-        //         })
-        //     }
-        // })
+        this.ssh.disconnect$.subscribe(() => {
+            this.logger.info(`SSH disconnected event`)
+            // if (!this.previouslyDisconnected) {
+            //     this.previouslyDisconnected = true
+            //     setTimeout(() => {
+            //         this.destroy()
+            //     })
+            // }
+        })
 
         // Authentication
 
