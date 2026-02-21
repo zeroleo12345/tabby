@@ -12,8 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       (
-        github.event_name == 'push' &&
-        github.ref_protected || startsWith(github.ref, 'refs/tags/v')
+        github.event_name == 'push' && github.ref_protected ||
+        startsWith(github.ref, 'refs/tags/v')
       ) ||
       (
         github.event_name == 'pull_request' &&
@@ -31,8 +31,8 @@ jobs:
       - Lint
     if: >
       (
-        github.event_name == 'push' &&
-        github.ref_protected || startsWith(github.ref, 'refs/tags/v')
+        github.event_name == 'push' && github.ref_protected ||
+        startsWith(github.ref, 'refs/tags/v')
       )
 
     steps:
@@ -199,8 +199,8 @@ jobs:
       - Draft-Release
     if: >
       (
-        github.event_name == 'push' &&
-        github.ref_protected || startsWith(github.ref, 'refs/tags/v')
+        github.event_name == 'push' && github.ref_protected ||
+        startsWith(github.ref, 'refs/tags/v')
       )
     steps:
       - uses: actions/checkout@v4

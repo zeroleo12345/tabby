@@ -27,7 +27,7 @@ export class SSHShellSession extends BaseSession {
         this.middleware.push(new InputProcessor(profile.options.input))
     }
 
-    async start (): Promise<void> {
+    async start (options: { columns: number, rows: number }): Promise<void> {
         if (!this.ssh) {
             throw new Error('SSH session not set')
         }
@@ -40,7 +40,11 @@ export class SSHShellSession extends BaseSession {
         this.logger.debug('Opening shell')
 
         try {
-            this.shell = await this.ssh.openShellChannel({ x11: this.profile.options.x11 })
+            this.shell = await this.ssh.openShellChannel({
+                x11: this.profile.options.x11,
+                columns: options.columns,
+                rows: options.rows,
+            })
         } catch (err) {
             if (err.toString().includes('Unable to request X11')) {
                 this.emitServiceMessage('    Make sure `xauth` is installed on the remote side')
