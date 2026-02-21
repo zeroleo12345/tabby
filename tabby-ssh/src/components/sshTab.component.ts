@@ -166,7 +166,10 @@ export class SSHTabComponent extends ConnectableTerminalTabComponent<SSHProfile>
             session.resize(this.size.columns, this.size.rows)
         })
 
-        await session.start()
+        await session.start({
+            columns: this.size.columns,
+            rows: this.size.rows,
+        })
 
         this.session?.resize(this.size.columns, this.size.rows)
     }
