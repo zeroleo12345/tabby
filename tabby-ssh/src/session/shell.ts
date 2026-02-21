@@ -27,7 +27,7 @@ export class SSHShellSession extends BaseSession {
         this.middleware.push(new InputProcessor(profile.options.input))
     }
 
-    async start (options: unknown = {}): Promise<void> {
+    async start (options: { columns: number, rows: number }): Promise<void> {
         if (!this.ssh) {
             throw new Error('SSH session not set')
         }
@@ -40,11 +40,10 @@ export class SSHShellSession extends BaseSession {
         this.logger.debug('Opening shell')
 
         try {
-            const ptySize = options as { columns: number, rows: number }
             this.shell = await this.ssh.openShellChannel({
                 x11: this.profile.options.x11,
-                columns: ptySize.columns,
-                rows: ptySize.rows,
+                columns: options.columns,
+                rows: options.rows,
             })
         } catch (err) {
             if (err.toString().includes('Unable to request X11')) {
