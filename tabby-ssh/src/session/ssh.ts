@@ -420,15 +420,15 @@ export class SSHSession {
             }
         })
 
-        // this.previouslyDisconnected = false
+        this.previouslyDisconnected = false
         this.ssh.disconnect$.subscribe(() => {
             this.logger.info(`SSH disconnected event`)
-            // if (!this.previouslyDisconnected) {
-            //     this.previouslyDisconnected = true
-            //     setTimeout(() => {
-            //         this.destroy()
-            //     })
-            // }
+            if (!this.previouslyDisconnected) {
+                this.previouslyDisconnected = true
+                setTimeout(() => {
+                    this.destroy()
+                })
+            }
         })
 
         // Authentication
@@ -650,7 +650,7 @@ export class SSHSession {
 
             remainingMethods = remainingMethods.filter(x => x !== method)
 
-            this.logger.debug(`handleAuth method.type: ${method.type}`)
+            this.logger.debug(`auth method.type: ${method.type}`)
             if (method.type === 'saved-password') {
                 this.emitServiceMessage(this.translate.instant('Using saved password'))
                 const result = await this.ssh.authenticateWithPassword(this.authUsername, method.password)
@@ -822,7 +822,7 @@ export class SSHSession {
     }
 
     async destroy (): Promise<void> {
-        this.logger.info(`SSH Destroying`)
+        this.logger.info(`SSH Destroying...`)
         this.willDestroy.next()
         this.willDestroy.complete()
         this.serviceMessage.complete()
