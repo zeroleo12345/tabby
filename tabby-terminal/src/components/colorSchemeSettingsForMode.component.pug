@@ -52,6 +52,12 @@
                 hint='Selection background'
             )
             color-picker(
+                [(model)]='config.store.terminal[this.configKey].selectionInactiveBackground',
+                (modelChange)='config.save()',
+                title='SB2',
+                hint='selection Inactive Background'
+            )
+            color-picker(
                 [(model)]='config.store.terminal[this.configKey].selectionForeground',
                 (modelChange)='config.save()',
                 title='SF',
