@@ -407,9 +407,9 @@ export class XTermFrontend extends Frontend {
 
         const theme: ITheme = {
             foreground: scheme.foreground,
-            selectionBackground: '#ffff00',
+            selectionBackground: scheme.selection ?? '#88888888',
             selectionForeground: scheme.selectionForeground ?? undefined,
-            selectionInactiveBackground: '#e96153',
+            selectionInactiveBackground: '#ffff00',
             background: getTerminalBackgroundColor(this.configService, this.themes, scheme) ?? '#00000000',
             cursor: scheme.cursor,
             cursorAccent: scheme.cursorAccent,
