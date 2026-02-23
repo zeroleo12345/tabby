@@ -28,7 +28,7 @@ export class DefaultColorSchemes extends TerminalColorSchemeProvider {
             '#ffffff',
         ],
         selection: undefined,
-        selectionInactiveBackground: undefined,
+        selectionInactiveBackground: '#ffff00',
         cursorAccent: undefined,
     }
 
@@ -56,7 +56,7 @@ export class DefaultColorSchemes extends TerminalColorSchemeProvider {
             '#ffffff',
         ],
         selection: undefined,
-        selectionInactiveBackground: undefined,
+        selectionInactiveBackground: '#ffff00',
         cursorAccent: undefined,
     }
 
