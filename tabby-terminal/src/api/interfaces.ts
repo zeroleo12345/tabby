@@ -13,6 +13,7 @@ export interface TerminalColorScheme {
     colors: string[]
     selection?: string
     selectionForeground?: string
+    selectionInactiveBackground?: string
     cursorAccent?: string
 }
 

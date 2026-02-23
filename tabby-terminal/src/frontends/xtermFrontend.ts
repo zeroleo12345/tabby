@@ -409,7 +409,7 @@ export class XTermFrontend extends Frontend {
             foreground: scheme.foreground,
             selectionBackground: scheme.selection ?? '#88888888',
             selectionForeground: scheme.selectionForeground ?? undefined,
-            selectionInactiveBackground: '#ffff00',
+            selectionInactiveBackground: scheme.selectionInactiveBackground ?? '#e96153',
             background: getTerminalBackgroundColor(this.configService, this.themes, scheme) ?? '#00000000',
             cursor: scheme.cursor,
             cursorAccent: scheme.cursorAccent,
@@ -491,8 +491,8 @@ export class XTermFrontend extends Frontend {
             decorations: {
                 matchOverviewRuler: '#888888',
                 activeMatchColorOverviewRuler: '#ffff00',
-                matchBackground: '#e96153',
-                activeMatchBackground: '#ffff00',
+                matchBackground:  this.xterm.options.theme?.selectionBackground,
+                activeMatchBackground: this.xterm.options.theme?.selectionInactiveBackground,
             },
         }
     }
