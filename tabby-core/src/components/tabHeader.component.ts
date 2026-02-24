@@ -89,6 +89,14 @@ export class TabHeaderComponent extends BaseComponent {
         })
     }
 
+    isSSHConnectionTab (): boolean {
+        return this.tab['profile']?.type === 'ssh'
+    }
+
+    isSSHSessionOpen (): boolean {
+        return !!this.tab['session']?.open
+    }
+
     @HostBinding('class.flex-width') get isFlexWidthEnabled (): boolean {
         return this.config.store.appearance.flexTabs
     }

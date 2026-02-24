@@ -13,6 +13,12 @@ profile-icon(
     [color]='tab.color ?? undefined'
 )
 
+i.fas.fa-xs.fa-circle.text-success.me-2(
+    [class.text-success]='isSSHSessionOpen()',
+    [class.text-danger]='!isSSHSessionOpen()'
+)
+//i.fas.fa-xs.fa-circle.text-danger.me-2(*ngIf='!session || !session.open')
+
 .name(
     [class.no-hover]='config.store.terminal.hideCloseButton && config.store.terminal.hideTabOptionsButton'
     cdkDrag,
