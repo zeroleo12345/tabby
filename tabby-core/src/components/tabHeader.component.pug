@@ -16,6 +16,7 @@ profile-icon(
 i.fas.fa-xs.fa-circle.me-2(
     [class.text-success]='isSSHSessionOpen()',
     [class.text-danger]='!isSSHSessionOpen()'
+    style='align-self: center;'
 )
 
 //i.fas.fa-xs.fa-circle.text-danger.me-2(*ngIf='!session || !session.open')
