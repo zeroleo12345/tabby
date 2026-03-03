@@ -1,6 +1,8 @@
 > https://github.com/Eugeny/tabby/blob/master/HACKING.md
 
-# Development
+# Local Development (MacOS, Windows)
+git tag v1.0.0  # 编译 master 分支需要 tag 临时绕过 git describe --tags 报错
+
 yarn
 
 yarn run watch  # yarn run build

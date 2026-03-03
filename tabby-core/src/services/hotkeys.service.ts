@@ -180,7 +180,7 @@ export class HotkeysService {
             //     // macOS will swallow non-modified keyups if Cmd is held down
             //     this.isHotkeyEvent('keyup', nativeEvent)
             // }
-            return true
+            return false
         }
         return false
     }
