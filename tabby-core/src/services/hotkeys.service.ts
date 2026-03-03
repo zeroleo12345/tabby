@@ -135,12 +135,12 @@ export class HotkeysService {
         }
         this.lastEventTimestamp = nativeEvent.timeStamp
 
-        // let keyTips = `111 eventName: ${eventName}, code: ${nativeEvent.code}`
-        // keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
-        // keyTips += nativeEvent.altKey ? ', altKey: true' : ''
-        // keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
-        // keyTips += nativeEvent.metaKey ? ', metaKey: true' : ''
-        // console.log(keyTips)
+        let keyTips = `111 eventName: ${eventName}, code: ${nativeEvent.code}`
+        keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
+        keyTips += nativeEvent.altKey ? ', altKey: true' : ''
+        keyTips += nativeEvent.shiftKey ? ', shiftKey: true' : ''
+        keyTips += nativeEvent.metaKey ? ', metaKey: true' : ''
+        console.log(keyTips)
 
         if (eventName === 'keydown') {
             // (f up) (Meta up) (Meta+f down) (Meta down) (Alt up) (Alt down)
