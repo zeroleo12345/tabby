@@ -176,20 +176,27 @@ export class SSHTabComponent extends ConnectableTerminalTabComponent<SSHProfile>
 
     async initializeSession (): Promise<void> {
         await super.initializeSession()
+        // try {
+        //     await this.initializeSessionMaybeMultiplex(true)
+        // } catch (e) {
+        //     if (e instanceof SSHAuthenticationCancelledError) {
+        //         this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
+        //         return
+        //     }
+        //     try {
+        //         await this.initializeSessionMaybeMultiplex(false)
+        //     } catch (e) {
+        //         console.error('SSH session initialization failed', e)
+        //         this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
+        //         return
+        //     }
+        // }
         try {
-            await this.initializeSessionMaybeMultiplex(true)
+            await this.initializeSessionMaybeMultiplex(false)
         } catch (e) {
-            if (e instanceof SSHAuthenticationCancelledError) {
-                this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
-                return
-            }
-            try {
-                await this.initializeSessionMaybeMultiplex(false)
-            } catch (e) {
-                console.error('SSH session initialization failed', e)
-                this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
-                return
-            }
+            console.error('SSH session initialization failed', e)
+            this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
+            return
         }
     }
 
