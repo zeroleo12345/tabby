@@ -75,6 +75,7 @@ export class SSHShellSession extends BaseSession {
     }
 
     resize (columns: number, rows: number): void {
+        console.log(`resizePTY columns: ${columns}, rows: ${rows}`)
         this.shell?.resizePTY({
             columns,
             rows,
