@@ -650,7 +650,7 @@ export class SSHSession {
 
             remainingMethods = remainingMethods.filter(x => x !== method)
 
-            this.logger.debug(`auth method.type: ${method.type}`)
+            this.logger.info(`auth method.type: ${method.type}`)
             if (method.type === 'saved-password') {
                 this.emitServiceMessage(this.translate.instant('Using saved password'))
                 const result = await this.ssh.authenticateWithPassword(this.authUsername, method.password)
