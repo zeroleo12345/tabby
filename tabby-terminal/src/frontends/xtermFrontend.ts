@@ -21,6 +21,7 @@ const COLOR_NAMES = [
     'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
     'brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite',
 ]
+const LEGACY_80_ERASE = /\x1b\[1A\x1b\[7[789]C +\x1b\[1A\x1b\[7[789]C/g
 
 class FlowControl {
     private blocked = false
@@ -358,15 +359,12 @@ export class XTermFrontend extends Frontend {
 
     async write (data: string): Promise<void> {
         // console.log(`111 [xterm][echo] length: ${data.length}, sample: ${data.slice(0, 200)}`)
-        // if (this.xterm.cols !== 80) {
-        //     // Filter legacy VT100/80-col erase sequences when running in xterm mode
-        //     const legacy80Erase = /\x1b\[1A\x1b\[7[789]C +\x1b\[1A\x1b\[7[789]C/g
-        //     if (legacy80Erase.test(data)) {
-        //         console.log('matched vt100 legacy 80-col erase, skipped')
-        //         legacy80Erase.lastIndex = 0
-        //         data = data.replace(legacy80Erase, '\x1b[1D \x1b[1D')
-        //     }
-        // }
+        // Filter legacy VT100/80-col erase sequences when running in xterm mode
+        if (LEGACY_80_ERASE.test(data)) {
+            console.log('matched vt100 legacy 80-col erase, skipped')
+            LEGACY_80_ERASE.lastIndex = 0
+            data = data.replace(LEGACY_80_ERASE, '\x1b[1D \x1b[1D')
+        }
         await this.flowControl.write(data)
     }
 

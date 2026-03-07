@@ -650,7 +650,7 @@ export class SSHSession {
 
             remainingMethods = remainingMethods.filter(x => x !== method)
 
-            this.logger.debug(`auth method.type: ${method.type}`)
+            this.logger.info(`auth method.type: ${method.type}`)
             if (method.type === 'saved-password') {
                 this.emitServiceMessage(this.translate.instant('Using saved password'))
                 const result = await this.ssh.authenticateWithPassword(this.authUsername, method.password)
@@ -834,9 +834,9 @@ export class SSHSession {
             throw new Error('Cannot open shell channel before auth')
         }
         const ch = await this.ssh.activateChannel(await this.ssh.openSessionChannel())
-        console.log(`requestPTY columns: ${options.columns}, rows: ${options.rows}`)
         const columns = Math.max(80, Math.floor(options.columns))
         const rows = Math.max(24, Math.floor(options.rows))
+        console.log(`requestPTY columns: ${options.columns}, rows: ${options.rows}`)
         await ch.requestPTY('xterm-256color', {
             columns,
             rows,
