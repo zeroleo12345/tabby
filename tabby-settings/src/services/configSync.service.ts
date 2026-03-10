@@ -179,8 +179,8 @@ export class ConfigSyncService {
             this.logger.debug('Config unchanged, skipping sync')
             return
         }
-        this.lastRemoteChange.digest = digest
         await this.platform.saveConfig(remoteConfig.content)
+        this.lastRemoteChange.digest = digest
         await this.config.load()
         await this.config.save()
     }
