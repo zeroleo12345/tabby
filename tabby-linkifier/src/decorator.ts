@@ -25,6 +25,7 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
                 if (!this.willHandleEvent(event)) {
                     return
                 }
+                this.swallowEvent(event)
                 this.platform.openExternal(uri)
             },
         }
@@ -57,6 +58,7 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
                 if (!this.willHandleEvent(event)) {
                     return
                 }
+                this.swallowEvent(event)
                 openLink(uri)
             },
             {
@@ -70,5 +72,12 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
     private willHandleEvent (event: MouseEvent) {
         const modifier = this.config.store.clickableLinks.modifier
         return !modifier || event[modifier]
+    }
+
+    private swallowEvent (event: MouseEvent): void {
+        if (event.cancelable) {
+            event.preventDefault()
+        }
+        event.stopPropagation()
     }
 }
