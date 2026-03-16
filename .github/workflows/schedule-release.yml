@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0    # 1: Default; 0: indicates all branches and tags
           token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
 
       - name: Fetch all tags
