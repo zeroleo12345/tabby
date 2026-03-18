@@ -20,12 +20,28 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
             return
         }
 
+        let lastLinkClickAt = 0
+        const markLinkClick = () => {
+            lastLinkClickAt = Date.now()
+        }
+        const maybeClearSelection = () => {
+            if (!lastLinkClickAt) {
+                return
+            }
+            if (Date.now() - lastLinkClickAt > 2000) {
+                return
+            }
+            tab.frontend.xterm.clearSelection()
+        }
+
         tab.frontend.xterm.options.linkHandler = {
             activate: (event, uri) => {
                 if (!this.willHandleEvent(event)) {
                     return
                 }
                 this.swallowEvent(event)
+                markLinkClick()
+                tab.frontend.xterm.clearSelection()
                 this.platform.openExternal(uri)
             },
         }
@@ -59,6 +75,8 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
                     return
                 }
                 this.swallowEvent(event)
+                markLinkClick()
+                tab.frontend.xterm.clearSelection()
                 openLink(uri)
             },
             {
@@ -67,6 +85,8 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
         )
 
         tab.frontend.xterm.loadAddon(addon)
+        window.addEventListener('blur', maybeClearSelection, true)
+        window.addEventListener('focus', maybeClearSelection, true)
     }
 
     private willHandleEvent (event: MouseEvent) {
