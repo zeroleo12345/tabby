@@ -15,7 +15,8 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
     }
 
     attach (tab: BaseTerminalTabComponent<any>): void {
-        if (!(tab.frontend instanceof XTermFrontend)) {
+        const frontend = tab.frontend
+        if (!(frontend instanceof XTermFrontend)) {
             // not xterm
             return
         }
@@ -31,17 +32,17 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
             if (Date.now() - lastLinkClickAt > 2000) {
                 return
             }
-            tab.frontend.xterm.clearSelection()
+            frontend.xterm.clearSelection()
         }
 
-        tab.frontend.xterm.options.linkHandler = {
+        frontend.xterm.options.linkHandler = {
             activate: (event, uri) => {
                 if (!this.willHandleEvent(event)) {
                     return
                 }
                 this.swallowEvent(event)
                 markLinkClick()
-                tab.frontend.xterm.clearSelection()
+                frontend.xterm.clearSelection()
                 this.platform.openExternal(uri)
             },
         }
@@ -76,7 +77,7 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
                 }
                 this.swallowEvent(event)
                 markLinkClick()
-                tab.frontend.xterm.clearSelection()
+                frontend.xterm.clearSelection()
                 openLink(uri)
             },
             {
@@ -84,7 +85,7 @@ export class LinkHighlighterDecorator extends TerminalDecorator {
             },
         )
 
-        tab.frontend.xterm.loadAddon(addon)
+        frontend.xterm.loadAddon(addon)
         window.addEventListener('blur', maybeClearSelection, true)
         window.addEventListener('focus', maybeClearSelection, true)
     }
