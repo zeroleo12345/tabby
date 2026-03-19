@@ -353,6 +353,17 @@ export class XTermFrontend extends Frontend {
         this.xterm.clearSelection()
     }
 
+    stopSelection (): void {
+        const core = (this.xterm as any)._core
+        const selectionService = core?._selectionService
+        if (!selectionService) {
+            return
+        }
+        if (typeof selectionService._removeMouseDownListeners === 'function') {
+            selectionService._removeMouseDownListeners()
+        }
+    }
+
     focus (): void {
         setTimeout(() => this.xterm.focus())
     }

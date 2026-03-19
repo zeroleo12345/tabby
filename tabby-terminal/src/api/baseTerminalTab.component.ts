@@ -752,7 +752,9 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                 if (event.altKey) {
                     event.preventDefault()
                     event.stopPropagation()
-                    this.frontend?.clearSelection()
+                    if (this.frontend instanceof XTermFrontend) {
+                        this.frontend.stopSelection()
+                    }
                     return
                 }
             }
