@@ -73,7 +73,6 @@ export class XTermFrontend extends Frontend {
     private configuredTheme: ITheme = {}
     private copyOnSelect = false
     private preventNextOnSelectionChangeEvent = false
-    private defaultAltClickMovesCursor?: boolean
     private search = new SearchAddon()
     private searchState: SearchState = { resultCount: 0 }
     private fitAddon = new FitAddon()
@@ -119,13 +118,12 @@ export class XTermFrontend extends Frontend {
         })
         this.flowControl = new FlowControl(this.xterm)
         this.xtermCore = this.xterm['_core']
-        this.defaultAltClickMovesCursor = (this.xterm.options as any).altClickMovesCursor
 
         this.xterm.onBinary(data => {
-            this.handleInput(Buffer.from(data, 'binary'))
+            this.input.next(Buffer.from(data, 'binary'))
         })
         this.xterm.onData(data => {
-            this.handleInput(Buffer.from(data, 'utf-8'))
+            this.input.next(Buffer.from(data, 'utf-8'))
         })
         this.xterm.onResize(({ cols, rows }) => {
             this.resize.next({ rows, columns: cols })
@@ -432,7 +430,6 @@ export class XTermFrontend extends Frontend {
 
     configure (profile: BaseTerminalProfile): void {
         const config = this.configService.store
-        const suppressAltMouseEvents = this.shouldSuppressAltMouseEvents()
 
         setImmediate(() => {
             if (this.xterm.cols && this.xterm.rows && this.xtermCore.charMeasure) {
@@ -466,11 +463,6 @@ export class XTermFrontend extends Frontend {
         this.xterm.options.fontWeightBold = config.terminal.fontWeightBold
         this.xterm.options.minimumContrastRatio = config.terminal.minimumContrastRatio
         this.xterm.options.scrollOnEraseInDisplay = true
-        if (this.defaultAltClickMovesCursor !== undefined || suppressAltMouseEvents) {
-            (this.xterm.options as any).altClickMovesCursor = suppressAltMouseEvents
-                ? false
-                : this.defaultAltClickMovesCursor
-        }
         this.configuredFontSize = config.terminal.platformFontSize[this.hostApp.platform]
         this.configuredLinePadding = config.terminal.linePadding
         this.setFontSize()
@@ -483,50 +475,6 @@ export class XTermFrontend extends Frontend {
             this.ligaturesAddon = new LigaturesAddon()
             this.xterm.loadAddon(this.ligaturesAddon)
         }
-    }
-
-    private handleInput (data: Buffer): void {
-        if (this.shouldSuppressAltMouseEvents() && this.isAltModifiedMouseSequence(data)) {
-            return
-        }
-        this.input.next(data)
-    }
-
-    private shouldSuppressAltMouseEvents (): boolean {
-        return this.configService.store.clickableLinks?.modifier === 'altKey'
-    }
-
-    private isAltModifiedMouseSequence (data: Buffer): boolean {
-        if (data.length < 3) {
-            return false
-        }
-        if (data[0] !== 0x1b || data[1] !== 0x5b) {
-            return false
-        }
-        // X10 mouse encoding: ESC [ M cb cx cy
-        if (data[2] === 0x4d) {
-            if (data.length < 6) {
-                return false
-            }
-            const cb = data[3] - 32
-            return (cb & 8) !== 0
-        }
-        // SGR mouse encoding: ESC [ < cb ; cx ; cy (M or m)
-        if (data[2] === 0x3c) {
-            let i = 3
-            let cb = 0
-            let hasDigits = false
-            while (i < data.length && data[i] >= 0x30 && data[i] <= 0x39) {
-                cb = cb * 10 + (data[i] - 0x30)
-                hasDigits = true
-                i++
-            }
-            if (!hasDigits || i >= data.length || data[i] !== 0x3b) {
-                return false
-            }
-            return (cb & 8) !== 0
-        }
-        return false
     }
 
     setZoom (zoom: number): void {
