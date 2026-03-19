@@ -738,10 +738,21 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                     this.handleRightMouseDown(event)
                     return
                 }
+                if (event.altKey) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    return
+                }
             }
             if (event.type === 'mouseup') {
                 if (event.which === 3 || event.which === 1 && event.ctrlKey) {
                     this.handleRightMouseUp(event)
+                    return
+                }
+                if (event.altKey) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    this.frontend?.clearSelection()
                     return
                 }
             }
