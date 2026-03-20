@@ -471,6 +471,7 @@ export class SSHSession {
         }
 
         // auth success
+
         for (const fw of this.profile.options.forwardedPorts) {
             this.addPortForward(Object.assign(new ForwardedPort(), fw))
         }
