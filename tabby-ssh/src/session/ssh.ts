@@ -471,11 +471,6 @@ export class SSHSession {
         }
 
         // auth success
-
-        if (this.savedPassword) {
-            this.passwordStorage.savePassword(this.profile, this.savedPassword, this.authUsername ?? undefined)
-        }
-
         for (const fw of this.profile.options.forwardedPorts) {
             this.addPortForward(Object.assign(new ForwardedPort(), fw))
         }
