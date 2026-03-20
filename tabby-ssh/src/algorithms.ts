@@ -1,4 +1,4 @@
-import * as russh from 'rustssh2'
+import * as russh from 'russh'
 import { SSHAlgorithmType } from './api'
 
 export const supportedAlgorithms = {

@@ -3,7 +3,7 @@ import { Subject, Observable } from 'rxjs'
 import { posix as posixPath } from 'path'
 import { Injector } from '@angular/core'
 import { FileDownload, FileUpload, Logger, LogService } from 'tabby-core'
-import * as russh from 'rustssh2'
+import * as russh from 'russh'
 
 export interface SFTPFile {
     name: string

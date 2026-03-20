@@ -16,7 +16,7 @@ import { SSHAlgorithmType, SSHProfile, AutoPrivateKeyLocator, PortForwardType } 
 import { ForwardedPort } from './forwards'
 import { X11Socket } from './x11'
 import { supportedAlgorithms } from '../algorithms'
-import * as russh from 'rustssh2'
+import * as russh from 'russh'
 
 const WINDOWS_OPENSSH_AGENT_PIPE = '\\\\.\\pipe\\openssh-ssh-agent'
 
@@ -471,6 +471,10 @@ export class SSHSession {
         }
 
         // auth success
+
+        if (this.savedPassword) {
+            this.passwordStorage.savePassword(this.profile, this.savedPassword, this.authUsername ?? undefined)
+        }
 
         for (const fw of this.profile.options.forwardedPorts) {
             this.addPortForward(Object.assign(new ForwardedPort(), fw))
