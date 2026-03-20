@@ -5,7 +5,7 @@ import { LogService } from 'tabby-core'
 import { BaseSession, UTF8SplitterMiddleware, InputProcessor } from 'tabby-terminal'
 import { SSHSession } from './ssh'
 import { SSHProfile } from '../api'
-import * as russh from 'rustssh2'
+import * as russh from 'russh'
 
 
 export class SSHShellSession extends BaseSession {
