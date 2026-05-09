@@ -105,6 +105,59 @@ export class ProfileTreeComponent extends BaseComponent {
         await this.config.save()
     }
 
+    private async duplicateProfile (base: PartialProfile<Profile>): Promise<void> {
+        const { EditProfileModalComponent } = window['nodeRequire']('tabby-settings')
+        const provider = this.profilesService.providerForProfile(base)
+        if (!provider) { throw new Error('Cannot duplicate a profile without a provider') }
+
+        const baseProfile: PartialProfile<Profile> = deepClone(base)
+        delete baseProfile.id
+        if (base.isTemplate) {
+            baseProfile.name = ''
+        } else if (!base.isBuiltin) {
+            baseProfile.name = this.translate.instant('{name} copy', base)
+        }
+        baseProfile.isBuiltin = false
+        baseProfile.isTemplate = false
+
+        const modal = this.ngbModal.open(
+            EditProfileModalComponent,
+            { size: 'lg' },
+        )
+        modal.componentInstance._profile = baseProfile
+        modal.componentInstance.profileProvider = provider
+
+        const result = await modal.result.catch(() => null)
+        if (!result) { return }
+        result.type = provider.id
+
+        if (!result.name) {
+            const cfgProxy = this.profilesService.getConfigProxyForProfile(result)
+            result.name = provider.getSuggestedName(cfgProxy) ?? this.translate.instant('{name} copy', base)
+        }
+
+        await this.profilesService.newProfile(result)
+        await this.config.save()
+    }
+
+    private async deleteProfile (profile: PartialProfile<Profile>): Promise<void> {
+        if ((await this.platform.showMessageBox(
+            {
+                type: 'warning',
+                message: this.translate.instant('Delete "{name}"?', profile),
+                buttons: [
+                    this.translate.instant('Delete'),
+                    this.translate.instant('Keep'),
+                ],
+                defaultId: 1,
+                cancelId: 1,
+            },
+        )).response === 0) {
+            await this.profilesService.deleteProfile(profile)
+            await this.config.save()
+        }
+    }
+
     private async editProfileGroup (group: PartialProfileGroup<CollapsableProfileGroup>): Promise<void> {
         const { EditProfileGroupModalComponent } = window['nodeRequire']('tabby-settings')
 
@@ -173,6 +226,18 @@ export class ProfileTreeComponent extends BaseComponent {
                 label: this.translate.instant('Edit profile'),
                 click: () => this.editProfile(profile),
                 enabled: !(profile.isBuiltin ?? profile.isTemplate),
+            },
+            {
+                type: 'normal',
+                label: this.translate.instant('Duplicate'),
+                click: () => this.duplicateProfile(profile),
+                enabled: !profile.isBuiltin,
+            },
+            {
+                type: 'normal',
+                label: this.translate.instant('Delete'),
+                click: () => this.deleteProfile(profile),
+                enabled: !profile.isBuiltin,
             },
         ])
     }
