@@ -7,6 +7,7 @@ import FuzzySearch from 'fuzzy-search'
 import { ConfigService } from '../services/config.service'
 import { ProfilesService } from '../services/profiles.service'
 import { AppService } from '../services/app.service'
+import { SelectorService } from '../services/selector.service'
 import { PlatformService } from '../api/platform'
 import { ProfileProvider } from '../api/index'
 import { PartialProfileGroup, ProfileGroup, PartialProfile, Profile } from '../index'
@@ -42,6 +43,7 @@ export class ProfileTreeComponent extends BaseComponent {
         private platform: PlatformService,
         private config: ConfigService,
         private profilesService: ProfilesService,
+        private selector: SelectorService,
         private translate: TranslateService,
         private ngbModal: NgbModal,
     ) {
@@ -105,6 +107,116 @@ export class ProfileTreeComponent extends BaseComponent {
         await this.config.save()
     }
 
+    private async duplicateProfile (base: PartialProfile<Profile>): Promise<void> {
+        const { EditProfileModalComponent } = window['nodeRequire']('tabby-settings')
+        const provider = this.profilesService.providerForProfile(base)
+        if (!provider) { throw new Error('Cannot duplicate a profile without a provider') }
+
+        const baseProfile: PartialProfile<Profile> = deepClone(base)
+        delete baseProfile.id
+        if (base.isTemplate) {
+            baseProfile.name = ''
+        } else if (!base.isBuiltin) {
+            baseProfile.name = this.translate.instant('{name} copy', base)
+        }
+        baseProfile.isBuiltin = false
+        baseProfile.isTemplate = false
+
+        const modal = this.ngbModal.open(
+            EditProfileModalComponent,
+            { size: 'lg' },
+        )
+        modal.componentInstance._profile = baseProfile
+        modal.componentInstance.profileProvider = provider
+
+        const result = await modal.result.catch(() => null)
+        if (!result) { return }
+        result.type = provider.id
+
+        if (!result.name) {
+            const cfgProxy = this.profilesService.getConfigProxyForProfile(result)
+            result.name = provider.getSuggestedName(cfgProxy) ?? this.translate.instant('{name} copy', base)
+        }
+
+        await this.profilesService.newProfile(result)
+        await this.config.save()
+    }
+
+    private async deleteProfile (profile: PartialProfile<Profile>): Promise<void> {
+        if ((await this.platform.showMessageBox(
+            {
+                type: 'warning',
+                message: this.translate.instant('Delete "{name}"?', profile),
+                buttons: [
+                    this.translate.instant('Delete'),
+                    this.translate.instant('Keep'),
+                ],
+                defaultId: 1,
+                cancelId: 1,
+            },
+        )).response === 0) {
+            await this.profilesService.deleteProfile(profile)
+            await this.config.save()
+        }
+    }
+
+    private async newProfileInGroup (group: PartialProfileGroup<CollapsableProfileGroup>): Promise<void> {
+        const { EditProfileModalComponent } = window['nodeRequire']('tabby-settings')
+
+        let profiles = await this.profilesService.getProfiles()
+        profiles = profiles.filter(x => x.isTemplate)
+        profiles.sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0))
+
+        const base = await this.selector.show(
+            this.translate.instant('Select a base profile to use as a template'),
+            profiles.map(p => ({
+                icon: p.icon ?? undefined,
+                description: this.profilesService.getDescription(p) ?? undefined,
+                name: p.group ? `${this.profilesService.resolveProfileGroupName(p.group)} / ${p.name}` : p.name,
+                result: p,
+            })),
+        ).catch(() => undefined)
+        if (!base) { return }
+
+        const provider = this.profilesService.providerForProfile(base)
+        if (!provider) { throw new Error('Cannot create a profile without a provider') }
+
+        const profile: PartialProfile<Profile> = deepClone(base)
+        delete profile.id
+        profile.name = ''
+        profile.isBuiltin = false
+        profile.isTemplate = false
+        if (group.id !== 'ungrouped') {
+            profile.group = group.id
+        } else {
+            delete profile.group
+        }
+
+        const modal = this.ngbModal.open(
+            EditProfileModalComponent,
+            { size: 'lg' },
+        )
+        modal.componentInstance._profile = profile
+        modal.componentInstance.profileProvider = provider
+
+        const result = await modal.result.catch(() => null)
+        if (!result) { return }
+        result.type = provider.id
+        if (group.id !== 'ungrouped') {
+            result.group = group.id
+        } else {
+            delete result.group
+        }
+
+        if (!result.name) {
+            const cfgProxy = this.profilesService.getConfigProxyForProfile(result)
+            result.name = provider.getSuggestedName(cfgProxy) ?? this.translate.instant('{name} copy', base)
+        }
+
+        await this.profilesService.newProfile(result)
+        await this.config.save()
+    }
+
     private async editProfileGroup (group: PartialProfileGroup<CollapsableProfileGroup>): Promise<void> {
         const { EditProfileGroupModalComponent } = window['nodeRequire']('tabby-settings')
 
@@ -165,14 +277,21 @@ export class ProfileTreeComponent extends BaseComponent {
         this.platform.popupContextMenu([
             {
                 type: 'normal',
-                label: this.translate.instant('Run'),
-                click: () => this.launchProfile(profile),
+                label: this.translate.instant('Edit'),
+                click: () => this.editProfile(profile),
+                enabled: !(profile.isBuiltin ?? profile.isTemplate),
             },
             {
                 type: 'normal',
-                label: this.translate.instant('Edit profile'),
-                click: () => this.editProfile(profile),
-                enabled: !(profile.isBuiltin ?? profile.isTemplate),
+                label: this.translate.instant('Duplicate'),
+                click: () => this.duplicateProfile(profile),
+                enabled: !profile.isBuiltin,
+            },
+            {
+                type: 'normal',
+                label: this.translate.instant('Delete'),
+                click: () => this.deleteProfile(profile),
+                enabled: !profile.isBuiltin,
             },
         ])
     }
@@ -182,8 +301,9 @@ export class ProfileTreeComponent extends BaseComponent {
         this.platform.popupContextMenu([
             {
                 type: 'normal',
-                label: group.collapsed ? this.translate.instant('Expand group') : this.translate.instant('Collapse group'),
-                click: () => this.toggleGroupCollapse(group),
+                label: this.translate.instant('New profile'),
+                click: () => this.newProfileInGroup(group),
+                enabled: group.id !== 'built-in',
             },
             {
                 type: 'normal',

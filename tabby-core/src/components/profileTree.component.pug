@@ -31,12 +31,12 @@
                     ng-container(*ngFor='let profile of group.profiles')
                         a.tree-item(
                             (dblclick)='launchProfile(profile)',
-                            [style.paddingLeft.px]='(depth + 1) * 40',
+                            [style.paddingLeft.px]='depth * 20 + 48',
                             (contextmenu)='profileContextMenu(profile, $event)',
                             href='#'
                         )
                             .fw-20
-                                profile-icon.ms-1([icon]='profile.icon', [color]='profile.color')
+                                profile-icon([icon]='profile.icon', [color]='profile.color')
                             span.ms-2.no-wrap {{ profile.name }}
 
                             .actions
