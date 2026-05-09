@@ -242,11 +242,6 @@ export class ProfileTreeComponent extends BaseComponent {
         this.platform.popupContextMenu([
             {
                 type: 'normal',
-                label: group.collapsed ? this.translate.instant('Expand group') : this.translate.instant('Collapse group'),
-                click: () => this.toggleGroupCollapse(group),
-            },
-            {
-                type: 'normal',
                 label: this.translate.instant('Edit group'),
                 click: () => this.editProfileGroup(group),
                 enabled: group.editable,
