@@ -218,11 +218,6 @@ export class ProfileTreeComponent extends BaseComponent {
         this.platform.popupContextMenu([
             {
                 type: 'normal',
-                label: this.translate.instant('Run'),
-                click: () => this.launchProfile(profile),
-            },
-            {
-                type: 'normal',
                 label: this.translate.instant('Edit profile'),
                 click: () => this.editProfile(profile),
                 enabled: !(profile.isBuiltin ?? profile.isTemplate),
