@@ -21,7 +21,11 @@ const COLOR_NAMES = [
     'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
     'brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite',
 ]
-const LEGACY_80_ERASE = /\x1b\[1A\x1b\[7[789]C +\x1b\[1A\x1b\[7[789]C/g
+const LEGACY_LEFT_ERASE_SEGMENT = /\x1b\[1A\x1b\[7[789]C/g
+const LEGACY_LEFT_ERASE_GROUP = /(?:\x1b\[1A\x1b\[7[789]C)(?: +\x1b\[1A\x1b\[7[789]C)*/g
+
+const LEGACY_RIGHT_ARROW_SEGMENT = /\x1b\[1B\x1b\[7[789]D/g
+const LEGACY_RIGHT_ARROW_GROUP = /(?:\x1b\[1B\x1b\[7[789]D)(?: +\x1b\[1B\x1b\[7[789]D)*/g
 
 class FlowControl {
     private blocked = false
@@ -369,10 +373,15 @@ export class XTermFrontend extends Frontend {
     async write (data: string): Promise<void> {
         // console.log(`111 [xterm][echo] length: ${data.length}, sample: ${data.slice(0, 200)}`)
         // Filter legacy VT100/80-col erase sequences when running in xterm mode
-        if (LEGACY_80_ERASE.test(data)) {
-            console.log('matched vt100 legacy 80-col erase, skipped')
-            LEGACY_80_ERASE.lastIndex = 0
-            data = data.replace(LEGACY_80_ERASE, '\x1b[1D \x1b[1D')
+        if (LEGACY_LEFT_ERASE_GROUP.test(data)) {
+            console.log('matched huawei left erase, skipped')
+            LEGACY_LEFT_ERASE_GROUP.lastIndex = 0
+            data = data.replace(LEGACY_LEFT_ERASE_GROUP, m => m.replace(LEGACY_LEFT_ERASE_SEGMENT, '\x1b[1D'))
+        }
+        if (LEGACY_RIGHT_ARROW_GROUP.test(data)) {
+            console.log('matched huawei right arrow, skipped')
+            LEGACY_RIGHT_ARROW_GROUP.lastIndex = 0
+            data = data.replace(LEGACY_RIGHT_ARROW_GROUP, m => m.replace(LEGACY_RIGHT_ARROW_SEGMENT, '\x1b[1C'))
         }
         await this.flowControl.write(data)
     }
