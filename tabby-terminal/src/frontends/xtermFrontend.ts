@@ -372,7 +372,6 @@ export class XTermFrontend extends Frontend {
 
     async write (data: string): Promise<void> {
         // console.log(`111 [xterm][echo] length: ${data.length}, sample: ${data.slice(0, 200)}`)
-        // 正则匹配: /(?:\x1b\[1A\x1b\[7[789]C)(?: +\x1b\[1A\x1b\[7[789]C)+/g
         // Filter legacy VT100/80-col erase sequences when running in xterm mode
         if (LEGACY_80_ERASE_GROUP.test(data)) {
             console.log('matched huawei vt100 legacy 80-col erase, skipped')
