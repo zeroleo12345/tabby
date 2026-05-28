@@ -82,6 +82,12 @@ $tab-border-radius: 4px;
     }
 }
 
+.content.tabs-on-top.profile-tree-visible > .tab-bar.tab-bar-no-controls-overlay {
+    > .inset {
+        width: 0;
+    }
+}
+
 .content.tabs-on-right > .tab-bar {
     .tabs {
         // Account for WCO on Windows.
