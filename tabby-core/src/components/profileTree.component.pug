@@ -1,6 +1,7 @@
 .div.p-2.h-100.d-flex.flex-column
+    .sidebar-title(*ngIf='hostApp.platform === Platform.Windows || hostApp.platform === Platform.macOS')
+        span(*ngIf='hostApp.platform === Platform.Windows') Session Manager
     input.form-control.form-control-sm.mb-1(
-        [ngStyle]='searchStyle',
         type='text',
         [(ngModel)]='filter',
         placeholder='Filter',

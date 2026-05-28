@@ -8,6 +8,7 @@ import { ConfigService } from '../services/config.service'
 import { ProfilesService } from '../services/profiles.service'
 import { AppService } from '../services/app.service'
 import { SelectorService } from '../services/selector.service'
+import { Platform, HostAppService } from '../api/hostApp'
 import { PlatformService } from '../api/platform'
 import { ProfileProvider } from '../api/index'
 import { PartialProfileGroup, ProfileGroup, PartialProfile, Profile } from '../index'
@@ -26,11 +27,13 @@ interface CollapsableProfileGroup extends ProfileGroup {
     templateUrl: './profileTree.component.pug',
 })
 export class ProfileTreeComponent extends BaseComponent {
+    Platform = Platform
     profileGroups: PartialProfileGroup<ProfileGroup>[] = []
     rootGroups: PartialProfileGroup<ProfileGroup>[] = []
 
     @Input() filter = ''
-    searchStyle = {}
+    @HostBinding('class.platform-macos') platformClassMacOS = process.platform === 'darwin'
+    @HostBinding('class.platform-windows') platformClassWindows = process.platform === 'win32'
 
     panelMinWidth = 200
     panelMaxWidth = 600
@@ -40,6 +43,7 @@ export class ProfileTreeComponent extends BaseComponent {
 
     constructor (
         private app: AppService,
+        public hostApp: HostAppService,
         private platform: PlatformService,
         private config: ConfigService,
         private profilesService: ProfilesService,
@@ -56,9 +60,6 @@ export class ProfileTreeComponent extends BaseComponent {
         this.subscribeUntilDestroyed(this.config.changed$, () => this.loadTreeItems())
         this.app.tabsChanged$.subscribe(() => this.tabStateChanged())
         this.app.activeTabChange$.subscribe(() => this.tabStateChanged())
-        if (window.navigator.platform.startsWith('Mac')) {
-            this.searchStyle = {'margin-top': 'calc(var(--tabs-height) - 0.5rem)'}
-        }
     }
 
 

@@ -3,10 +3,33 @@
     height: 100vh;
     position: relative;
     border-right: 1px solid var(--theme-secondary);
+
+    &.platform-macos,
+    &.platform-windows {
+        input {
+            margin-top: calc(var(--tabs-height) - 0.5rem);
+        }
+    }
 }
 
 input {
     border: 1px solid var(--theme-secondary);
+}
+
+.sidebar-title {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: var(--tabs-height);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 0.5rem;
+    color: var(--theme-secondary-fg);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    -webkit-app-region: drag;
 }
 
 .profile-tree {
