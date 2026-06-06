@@ -13,6 +13,7 @@ export class SSHShellSession extends BaseSession {
     get serviceMessage$ (): Observable<string> { return this.serviceMessage }
     private serviceMessage = new Subject<string>()
     private ssh: SSHSession|null
+    private destroying = false
 
     constructor (
         injector: Injector,
@@ -61,12 +62,8 @@ export class SSHShellSession extends BaseSession {
             this.emitOutput(Buffer.from(data))
         })
 
-        this.shell.eof$.subscribe(() => {
-            this.logger.info('Shell session ended')
-            if (this.open) {
-                this.destroy()
-            }
-        })
+        this.shell.eof$.subscribe(() => this.destroyFromChannelEvent('Shell session ended'))
+        this.shell.closed$.subscribe(() => this.destroyFromChannelEvent('Shell channel closed'))
     }
 
     emitServiceMessage (msg: string): void {
@@ -76,18 +73,22 @@ export class SSHShellSession extends BaseSession {
 
     resize (columns: number, rows: number): void {
         console.log(`resizePTY columns: ${columns}, rows: ${rows}`)
-        this.shell?.resizePTY({
+        if (!this.shell || !this.open) {
+            return
+        }
+        this.shell.resizePTY({
             columns,
             rows,
             pixHeight: 0,
             pixWidth: 0,
-        })
+        }).catch((err: Error) => this.destroyFromChannelEvent(`Shell resize failed, ${err.message}`))
     }
 
     write (data: Buffer): void {
-        if (this.shell) {
-            this.shell.write(new Uint8Array(data))
+        if (!this.shell || !this.open) {
+            return
         }
+        this.shell.write(new Uint8Array(data)).catch((err: Error) => this.destroyFromChannelEvent(`Shell write failed, ${err.message}`))
     }
 
     kill (_signal?: string): void {
@@ -95,12 +96,23 @@ export class SSHShellSession extends BaseSession {
     }
 
     async destroy (): Promise<void> {
+        if (this.destroying) {
+            return
+        }
+        this.destroying = true
         this.logger.debug('Closing shell')
         this.serviceMessage.complete()
         this.kill()
         this.ssh?.unref()
         this.ssh = null
         await super.destroy()
+    }
+
+    private destroyFromChannelEvent (message: string): void {
+        this.logger.info(`${message}`)
+        if (this.open && !this.destroying) {
+            this.destroy().catch((err: Error) => this.logger.error(`Could not destroy SSH shell session: ${err.message}`))
+        }
     }
 
     async getChildProcesses (): Promise<any[]> {
