@@ -109,7 +109,7 @@ export class SSHShellSession extends BaseSession {
     }
 
     private destroyFromChannelEvent (message: string): void {
-        this.logger.warn(`${message}`)
+        this.logger.info(`${message}`)
         if (this.open && !this.destroying) {
             this.destroy().catch((err: Error) => this.logger.error(`Could not destroy SSH shell session: ${err.message}`))
         }
