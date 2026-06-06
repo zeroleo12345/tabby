@@ -81,14 +81,14 @@ export class SSHShellSession extends BaseSession {
             rows,
             pixHeight: 0,
             pixWidth: 0,
-        }).catch(err => this.destroyFromChannelEvent('Shell resize failed', err))
+        }).catch((err: Error) => this.destroyFromChannelEvent(`Shell resize failed, ${err.message}`))
     }
 
     write (data: Buffer): void {
         if (!this.shell || !this.open) {
             return
         }
-        this.shell.write(new Uint8Array(data)).catch(err => this.destroyFromChannelEvent('Shell write failed', err))
+        this.shell.write(new Uint8Array(data)).catch((err: Error) => this.destroyFromChannelEvent(`Shell write failed, ${err.message}`))
     }
 
     kill (_signal?: string): void {
@@ -108,32 +108,11 @@ export class SSHShellSession extends BaseSession {
         await super.destroy()
     }
 
-    private destroyFromChannelEvent (message: string, error?: unknown): void {
-        if (error) {
-            this.logger.error(`${message}: ${this.formatError(error)}`)
-        } else {
-            this.logger.info(message)
-        }
+    private destroyFromChannelEvent (message: string): void {
+        this.logger.warn(`${message}`)
         if (this.open && !this.destroying) {
-            this.destroy().catch(err => this.logger.error(`Could not destroy SSH shell session: ${err}`))
+            this.destroy().catch((err: Error) => this.logger.error(`Could not destroy SSH shell session: ${err.message}`))
         }
-    }
-
-    private formatError (error: unknown): string {
-        if (error instanceof Error) {
-            return error.message
-        }
-        if (error === null) {
-            return 'null'
-        }
-        if (typeof error === 'object') {
-            try {
-                return JSON.stringify(error)
-            } catch {
-                return Object.prototype.toString.call(error)
-            }
-        }
-        return String(error)
     }
 
     async getChildProcesses (): Promise<any[]> {
