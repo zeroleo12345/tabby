@@ -199,8 +199,8 @@ export class HotkeysService {
         if (!hotkey) {
             return false
         }
+        console.log(`terminalTabFocus: ${this.contextKey['terminalTabFocus']}`)
         if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
-            console.log(`terminalTabFocus: ${this.contextKey['terminalTabFocus']}`)
             // only focus on terminal tab, hotkey "select-all" work, else return
             return false
         }

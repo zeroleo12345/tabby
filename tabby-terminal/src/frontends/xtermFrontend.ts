@@ -87,6 +87,8 @@ export class XTermFrontend extends Frontend {
     private opened = false
     private resizeObserver?: any
     private flowControl: FlowControl
+    private focusInHandler?: () => void
+    private focusOutHandler?: () => void
 
     private configService: ConfigService
     private hotkeysService: HotkeysService
@@ -287,7 +289,7 @@ export class XTermFrontend extends Frontend {
         // xterm 6 addon-search updates matches on every onWriteParsed event.
         // Keep legacy behavior by disabling automatic incremental refresh.
         const searchAddon = this.search as any
-        searchAddon._updateMatches = () => {}
+        searchAddon._updateMatches = () => undefined
 
         this.search.onDidChangeResults(state => {
             this.searchState = state
@@ -311,12 +313,31 @@ export class XTermFrontend extends Frontend {
             event.stopPropagation()
         })
 
+        this.focusInHandler = () => this.focused.next()
+        this.focusOutHandler = () => {
+            setTimeout(() => {
+                if (!host.contains(document.activeElement)) {
+                    this.blurred.next()
+                }
+            })
+        }
+        host.addEventListener('focusin', this.focusInHandler)
+        host.addEventListener('focusout', this.focusOutHandler)
+
         this.resizeObserver = new window['ResizeObserver'](() => setTimeout(() => this.resizeHandler()))
         this.resizeObserver.observe(host)
     }
 
-    detach (_host: HTMLElement): void {
+    detach (host: HTMLElement): void {
         window.removeEventListener('resize', this.resizeHandler)
+        if (this.focusInHandler) {
+            host.removeEventListener('focusin', this.focusInHandler)
+        }
+        if (this.focusOutHandler) {
+            host.removeEventListener('focusout', this.focusOutHandler)
+        }
+        delete this.focusInHandler
+        delete this.focusOutHandler
         this.resizeObserver?.disconnect()
         delete this.resizeObserver
     }
@@ -507,7 +528,7 @@ export class XTermFrontend extends Frontend {
             decorations: {
                 matchOverviewRuler: '#888888',
                 activeMatchColorOverviewRuler: '#ffff00',
-                matchBackground:  this.xterm.options.theme?.selectionBackground,
+                matchBackground: this.xterm.options.theme?.selectionBackground,
                 activeMatchBackground: this.xterm.options.theme?.selectionInactiveBackground,
             },
         }

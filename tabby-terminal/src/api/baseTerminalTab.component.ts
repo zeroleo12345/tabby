@@ -348,7 +348,6 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.pinToolbar = this.enableToolbar && (window.localStorage.pinTerminalToolbar ?? 'true') === 'true'
 
         this.focused$.subscribe(() => {
-            this.hotkeys.contextKey['terminalTabFocus'] = true
             this.configure()
             this.frontend?.focus()
         })
@@ -447,7 +446,6 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.frontend.focus()
 
         this.blurred$.subscribe(() => {
-            this.hotkeys.contextKey['terminalTabFocus'] = false
             this.multifocus.cancel()
         })
 
@@ -717,6 +715,18 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                 this.setTitle(title)
             }
         }))
+
+        this.termContainerSubscriptions.subscribe(this.frontend.focused$, () => {
+            if (this.hasFocus) {
+                this.hotkeys.contextKey['terminalTabFocus'] = true
+                console.log(`contextKey: true`)
+            }
+        })
+        this.termContainerSubscriptions.subscribe(this.frontend.blurred$, () => {
+            this.hotkeys.contextKey['terminalTabFocus'] = false
+            console.log(`contextKey: false`)
+            this.multifocus.cancel()
+        })
 
         this.termContainerSubscriptions.subscribe(this.focused$, () => this.frontend && (this.frontend.enableResizing = true))
         this.termContainerSubscriptions.subscribe(this.blurred$, () => this.frontend && (this.frontend.enableResizing = false))
