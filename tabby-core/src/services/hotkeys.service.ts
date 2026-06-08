@@ -117,9 +117,8 @@ export class HotkeysService {
      * @param {KeyboardEvent} e
      * @return {boolean}
      */
-    isRefresh (e) {
-        // 116: keyCode of "F5"
-        return e.keyCode === 116;
+    isRefresh (e: KeyboardEvent): boolean {
+        return e.key === 'F5'
     }
 
     /**
@@ -144,16 +143,16 @@ export class HotkeysService {
 
         if (eventName === 'keydown') {
             // (f up) (Meta up) (Meta+f down) (Meta down) (Alt up) (Alt down)
-            if (nativeEvent.ctrlKey && nativeEvent.key != 'Control') {
+            if (nativeEvent.ctrlKey && nativeEvent.key !== 'Control') {
                 return this.matchActiveHotkey(nativeEvent)
             }
-            if (nativeEvent.metaKey && nativeEvent.key != 'Meta') {
+            if (nativeEvent.metaKey && nativeEvent.key !== 'Meta') {
                 return this.matchActiveHotkey(nativeEvent)
             }
-            if (nativeEvent.altKey && nativeEvent.key != 'Alt') {
+            if (nativeEvent.altKey && nativeEvent.key !== 'Alt') {
                 return this.matchActiveHotkey(nativeEvent)
             }
-            if (nativeEvent.shiftKey && nativeEvent.key != 'Shift') {
+            if (nativeEvent.shiftKey && nativeEvent.key !== 'Shift') {
                 return this.matchActiveHotkey(nativeEvent)
             }
             if ([
@@ -201,6 +200,7 @@ export class HotkeysService {
             return false
         }
         if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
+            console.log(`terminalTabFocus: ${this.contextKey['terminalTabFocus']}`)
             // only focus on terminal tab, hotkey "select-all" work, else return
             return false
         }
