@@ -15,11 +15,6 @@ export class HotkeysService {
     matchedHotkey = new EventEmitter<string>()
 
     /**
-     * Context key for each component status
-     */
-    contextKey = new Map<KeyName, boolean>()
-
-    /**
      * Fired for each recognized hotkey
      */
     get unfilteredHotkey$ (): Observable<string> { return this._hotkey }
