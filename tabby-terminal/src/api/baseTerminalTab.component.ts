@@ -257,8 +257,8 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                 case 'select-all':
                     if (this.searchPanel?.hasFocus()) {
                         this.searchPanel.selectAll()
-                    } else if (this.frontend?.focus()) {
-                        this.frontend?.selectAll()
+                    } else if (this.frontend?.hasFocus()) {
+                        this.frontend.selectAll()
                     }
                     break
                 case 'clear':

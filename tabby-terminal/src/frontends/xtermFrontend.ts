@@ -87,8 +87,6 @@ export class XTermFrontend extends Frontend {
     private opened = false
     private resizeObserver?: any
     private flowControl: FlowControl
-    private focusInHandler?: () => void
-    private focusOutHandler?: () => void
 
     private configService: ConfigService
     private hotkeysService: HotkeysService
@@ -313,31 +311,12 @@ export class XTermFrontend extends Frontend {
             event.stopPropagation()
         })
 
-        this.focusInHandler = () => this.focused.next()
-        this.focusOutHandler = () => {
-            setTimeout(() => {
-                if (!host.contains(document.activeElement)) {
-                    this.blurred.next()
-                }
-            })
-        }
-        host.addEventListener('focusin', this.focusInHandler)
-        host.addEventListener('focusout', this.focusOutHandler)
-
         this.resizeObserver = new window['ResizeObserver'](() => setTimeout(() => this.resizeHandler()))
         this.resizeObserver.observe(host)
     }
 
-    detach (host: HTMLElement): void {
+    detach (_host: HTMLElement): void {
         window.removeEventListener('resize', this.resizeHandler)
-        if (this.focusInHandler) {
-            host.removeEventListener('focusin', this.focusInHandler)
-        }
-        if (this.focusOutHandler) {
-            host.removeEventListener('focusout', this.focusOutHandler)
-        }
-        delete this.focusInHandler
-        delete this.focusOutHandler
         this.resizeObserver?.disconnect()
         delete this.resizeObserver
     }
@@ -388,8 +367,11 @@ export class XTermFrontend extends Frontend {
     }
 
     focus (): void {
-        console.log("xterm focus")
         setTimeout(() => this.xterm.focus())
+    }
+
+    hasFocus (): boolean {
+        return !!this.element?.contains(document.activeElement)
     }
 
     async write (data: string): Promise<void> {

@@ -25,8 +25,6 @@ export abstract class Frontend {
     protected mouseEvent = new Subject<MouseEvent>()
     protected bell = new Subject<void>()
     protected contentUpdated = new Subject<void>()
-    protected focused = new Subject<void>()
-    protected blurred = new Subject<void>()
     protected input = new Subject<Buffer>()
     protected resize = new ReplaySubject<ResizeEvent>(1)
     protected dragOver = new Subject<DragEvent>()
@@ -39,8 +37,6 @@ export abstract class Frontend {
     get mouseEvent$ (): Observable<MouseEvent> { return this.mouseEvent }
     get bell$ (): Observable<void> { return this.bell }
     get contentUpdated$ (): Observable<void> { return this.contentUpdated }
-    get focused$ (): Observable<void> { return this.focused }
-    get blurred$ (): Observable<void> { return this.blurred }
     get input$ (): Observable<Buffer> { return this.input }
     get resize$ (): Observable<ResizeEvent> { return this.resize }
     get dragOver$ (): Observable<DragEvent> { return this.dragOver }
@@ -58,8 +54,6 @@ export abstract class Frontend {
             this.mouseEvent,
             this.bell,
             this.contentUpdated,
-            this.focused,
-            this.blurred,
             this.input,
             this.resize,
             this.dragOver,
@@ -78,6 +72,7 @@ export abstract class Frontend {
     abstract selectAll (): void
     abstract clearSelection (): void
     abstract focus (): void
+    abstract hasFocus (): boolean
     abstract write (data: string): Promise<void>
     abstract clear (): void
     abstract visualBell (): void
