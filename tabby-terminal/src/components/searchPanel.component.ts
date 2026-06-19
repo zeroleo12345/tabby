@@ -45,6 +45,21 @@ export class SearchPanelComponent {
         this.queryChanged.next(this.query)
     }
 
+    onInputKeyDown (event: KeyboardEvent): void {
+        const isSelectAll = (event.ctrlKey || event.metaKey) &&
+            !event.altKey &&
+            event.key.toLowerCase() === 'a'
+
+        if (!isSelectAll) {
+            return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        const input = event.target as HTMLInputElement
+        input.select()
+    }
+
     findNext (incremental = false): void {
         if (!this.query) {
             return
