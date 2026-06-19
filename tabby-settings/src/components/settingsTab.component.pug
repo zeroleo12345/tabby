@@ -148,6 +148,7 @@
                         .w-100.d-flex.flex-column
                             h3(translate) Config file
                             textarea.form-control.h-100(
+                                #configFileInput,
                                 [(ngModel)]='configFile'
                             )
                         .w-100.d-flex.flex-column(*ngIf='showConfigDefaults')

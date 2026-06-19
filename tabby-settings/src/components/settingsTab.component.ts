@@ -2,7 +2,7 @@
 import { marker as _ } from '@biesbjerg/ngx-translate-extract-marker'
 import * as yaml from 'js-yaml'
 import { debounce } from 'utils-decorators/dist/esm/debounce/debounce'
-import { Component, Inject, Input, HostBinding, Injector } from '@angular/core'
+import { Component, ElementRef, Inject, Input, HostBinding, Injector, ViewChild } from '@angular/core'
 import {
     ConfigService,
     BaseTabComponent,
@@ -15,6 +15,7 @@ import {
     AppService,
     LocaleService,
     TranslateService,
+    HotkeysService,
 } from 'tabby-core'
 
 import { SettingsTabProvider } from '../api'
@@ -30,6 +31,7 @@ import { ReleaseNotesComponent } from './releaseNotesTab.component'
 })
 export class SettingsTabComponent extends BaseTabComponent {
     @Input() activeTab: string
+    @ViewChild('configFileInput') configFileInput?: ElementRef<HTMLTextAreaElement>
     Platform = Platform
     configDefaults: any
     configFile: string
@@ -49,6 +51,7 @@ export class SettingsTabComponent extends BaseTabComponent {
         public locale: LocaleService,
         public updater: UpdaterService,
         private app: AppService,
+        private hotkeys: HotkeysService,
         @Inject(SettingsTabProvider) public settingsProviders: SettingsTabProvider[],
         translate: TranslateService,
         injector: Injector,
@@ -68,6 +71,11 @@ export class SettingsTabComponent extends BaseTabComponent {
         }
 
         this.subscribeUntilDestroyed(config.changed$, onConfigChange)
+        this.subscribeUntilDestroyed(this.hotkeys.unfilteredHotkey$, hotkey => {
+            if (hotkey === 'select-all' && this.configInputFocused()) {
+                this.selectAllConfig()
+            }
+        })
         onConfigChange()
     }
 
@@ -108,6 +116,14 @@ export class SettingsTabComponent extends BaseTabComponent {
 
     showConfigFile () {
         this.platform.showItemInFolder(this.platform.getConfigPath()!)
+    }
+
+    configInputFocused () {
+        return this.hasFocus && document.activeElement === this.configFileInput?.nativeElement
+    }
+
+    selectAllConfig () {
+        this.configFileInput?.nativeElement.select()
     }
 
     isConfigFileValid () {
