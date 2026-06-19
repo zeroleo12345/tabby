@@ -255,7 +255,11 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                     this.forEachFocusedTerminalPane(tab => tab.paste())
                     break
                 case 'select-all':
-                    this.frontend?.selectAll()
+                    if (this.searchPanel?.hasFocus()) {
+                        this.searchPanel.selectAll()
+                    } else {
+                        this.frontend?.selectAll()
+                    }
                     break
                 case 'clear':
                     this.forEachFocusedTerminalPane(tab => tab.frontend?.clear())

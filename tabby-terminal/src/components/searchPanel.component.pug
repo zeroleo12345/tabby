@@ -1,11 +1,11 @@
 .input-group
     input.search-input.form-control(
+        #input,
         type='text',
         [(ngModel)]='query',
         (ngModelChange)='onQueryChange()',
         [class.text-danger]='state.resultCount == 0',
         (click)='$event.stopPropagation()',
-        (keydown)='onInputKeyDown($event)',
         (keyup.enter)='findPrevious()',
         (keyup.up)='findPrevious()',
         (keyup.down)='findNext()',

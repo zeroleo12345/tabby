@@ -200,14 +200,21 @@ export class HotkeysService {
             return false
         }
         console.log(`terminalTabFocus: ${this.contextKey['terminalTabFocus']}`)
-        if (['select-all'].includes(hotkey) && this.contextKey['terminalTabFocus'] === false) {
-            // only focus on terminal tab, hotkey "select-all" work, else return
+        if (['select-all'].includes(hotkey) &&
+            this.contextKey['terminalTabFocus'] === false &&
+            !this.isSearchPanelInput(nativeEvent.target)
+        ) {
+            // Let terminal tabs and their search panel inputs handle select-all.
             return false
         }
         this.zone.run(() => {
             this.emitHotkeyOn(hotkey)
         })
         return true
+    }
+
+    private isSearchPanelInput (target: EventTarget|null): boolean {
+        return target instanceof HTMLInputElement && !!target.closest('search-panel')
     }
 
     clearCurrentKeystrokes (): void {
