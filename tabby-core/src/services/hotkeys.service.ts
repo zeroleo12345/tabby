@@ -200,10 +200,6 @@ export class HotkeysService {
         return true
     }
 
-    private isSearchPanelInput (target: EventTarget|null): boolean {
-        return target instanceof HTMLInputElement && !!target.closest('search-panel')
-    }
-
     clearCurrentKeystrokes (): void {
     }
 

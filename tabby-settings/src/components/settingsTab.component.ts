@@ -72,7 +72,7 @@ export class SettingsTabComponent extends BaseTabComponent {
 
         this.subscribeUntilDestroyed(config.changed$, onConfigChange)
         this.subscribeUntilDestroyed(this.hotkeys.unfilteredHotkey$, hotkey => {
-            if (hotkey === 'select-all' && this.configInputFocused()) {
+            if (hotkey === 'select-all' && this.configFileInputFocused()) {
                 this.selectAllConfig()
             }
         })
@@ -118,7 +118,7 @@ export class SettingsTabComponent extends BaseTabComponent {
         this.platform.showItemInFolder(this.platform.getConfigPath()!)
     }
 
-    configInputFocused () {
+    configFileInputFocused () {
         return this.hasFocus && document.activeElement === this.configFileInput?.nativeElement
     }
 
