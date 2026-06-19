@@ -257,7 +257,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                 case 'select-all':
                     if (this.searchPanel?.hasFocus()) {
                         this.searchPanel.selectAll()
-                    } else {
+                    } else if (this.frontend?.focus()) {
                         this.frontend?.selectAll()
                     }
                     break
@@ -719,18 +719,6 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                 this.setTitle(title)
             }
         }))
-
-        this.termContainerSubscriptions.subscribe(this.frontend.focused$, () => {
-            if (this.hasFocus) {
-                this.hotkeys.contextKey['terminalTabFocus'] = true
-                console.log(`contextKey: true`)
-            }
-        })
-        this.termContainerSubscriptions.subscribe(this.frontend.blurred$, () => {
-            this.hotkeys.contextKey['terminalTabFocus'] = false
-            console.log(`contextKey: false`)
-            this.multifocus.cancel()
-        })
 
         this.termContainerSubscriptions.subscribe(this.focused$, () => this.frontend && (this.frontend.enableResizing = true))
         this.termContainerSubscriptions.subscribe(this.blurred$, () => this.frontend && (this.frontend.enableResizing = false))

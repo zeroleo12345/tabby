@@ -199,14 +199,6 @@ export class HotkeysService {
         if (!hotkey) {
             return false
         }
-        console.log(`terminalTabFocus: ${this.contextKey['terminalTabFocus']}`)
-        if (['select-all'].includes(hotkey) &&
-            this.contextKey['terminalTabFocus'] === false &&
-            !this.isSearchPanelInput(nativeEvent.target)
-        ) {
-            // Let terminal tabs and their search panel inputs handle select-all.
-            return false
-        }
         this.zone.run(() => {
             this.emitHotkeyOn(hotkey)
         })

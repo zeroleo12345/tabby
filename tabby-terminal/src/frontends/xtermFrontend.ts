@@ -388,6 +388,7 @@ export class XTermFrontend extends Frontend {
     }
 
     focus (): void {
+        console.log("xterm focus")
         setTimeout(() => this.xterm.focus())
     }
 
