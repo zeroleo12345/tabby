@@ -1,5 +1,6 @@
 .input-group
     input.search-input.form-control(
+        #input,
         type='text',
         [(ngModel)]='query',
         (ngModelChange)='onQueryChange()',

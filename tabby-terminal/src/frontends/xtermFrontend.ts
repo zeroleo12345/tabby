@@ -287,7 +287,7 @@ export class XTermFrontend extends Frontend {
         // xterm 6 addon-search updates matches on every onWriteParsed event.
         // Keep legacy behavior by disabling automatic incremental refresh.
         const searchAddon = this.search as any
-        searchAddon._updateMatches = () => {}
+        searchAddon._updateMatches = () => undefined
 
         this.search.onDidChangeResults(state => {
             this.searchState = state
@@ -368,6 +368,10 @@ export class XTermFrontend extends Frontend {
 
     focus (): void {
         setTimeout(() => this.xterm.focus())
+    }
+
+    hasFocus (): boolean {
+        return !!this.element?.contains(document.activeElement)
     }
 
     async write (data: string): Promise<void> {
@@ -507,7 +511,7 @@ export class XTermFrontend extends Frontend {
             decorations: {
                 matchOverviewRuler: '#888888',
                 activeMatchColorOverviewRuler: '#ffff00',
-                matchBackground:  this.xterm.options.theme?.selectionBackground,
+                matchBackground: this.xterm.options.theme?.selectionBackground,
                 activeMatchBackground: this.xterm.options.theme?.selectionInactiveBackground,
             },
         }

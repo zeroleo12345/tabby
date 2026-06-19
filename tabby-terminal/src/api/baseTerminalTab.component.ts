@@ -255,7 +255,11 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
                     this.forEachFocusedTerminalPane(tab => tab.paste())
                     break
                 case 'select-all':
-                    this.frontend?.selectAll()
+                    if (this.searchPanel?.hasFocus()) {
+                        this.searchPanel.selectAll()
+                    } else if (this.frontend?.hasFocus()) {
+                        this.frontend.selectAll()
+                    }
                     break
                 case 'clear':
                     this.forEachFocusedTerminalPane(tab => tab.frontend?.clear())
@@ -348,7 +352,6 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.pinToolbar = this.enableToolbar && (window.localStorage.pinTerminalToolbar ?? 'true') === 'true'
 
         this.focused$.subscribe(() => {
-            this.hotkeys.contextKey['terminalTabFocus'] = true
             this.configure()
             this.frontend?.focus()
         })
@@ -447,7 +450,6 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.frontend.focus()
 
         this.blurred$.subscribe(() => {
-            this.hotkeys.contextKey['terminalTabFocus'] = false
             this.multifocus.cancel()
         })
 

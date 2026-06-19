@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core'
+import { Component, Input, Output, EventEmitter, ElementRef, ViewChild } from '@angular/core'
 import { Subject, debounceTime } from 'rxjs'
 import { Frontend, SearchOptions, SearchState } from '../frontends/frontend'
 import { ConfigService, NotificationsService, TranslateService } from 'tabby-core'
@@ -11,6 +11,7 @@ import { ConfigService, NotificationsService, TranslateService } from 'tabby-cor
 export class SearchPanelComponent {
     @Input() query: string
     @Input() frontend: Frontend
+    @ViewChild('input') input?: ElementRef<HTMLInputElement>
     state: SearchState = { resultCount: 0 }
     options: SearchOptions = {
         incremental: true,
@@ -43,6 +44,14 @@ export class SearchPanelComponent {
     onQueryChange (): void {
         this.state = { resultCount: 0 }
         this.queryChanged.next(this.query)
+    }
+
+    hasFocus (): boolean {
+        return document.activeElement === this.input?.nativeElement
+    }
+
+    selectAll (): void {
+        this.input?.nativeElement.select()
     }
 
     findNext (incremental = false): void {
