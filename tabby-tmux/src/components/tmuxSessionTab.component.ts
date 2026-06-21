@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs'
 import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
 import { TmuxController } from '../session'
-import { TmuxService } from '../services/tmux.service'
+import type { TmuxService } from '../services/tmux.service'
 import { TMUX_COMMAND_TOLERATE_ERRORS } from '../gateway'
 import { TmuxPaneTabComponent } from './tmuxPaneTab.component'
 import { parseTmuxLayout, TmuxLayoutNode, flattenLayout } from '../layoutParser'
@@ -114,6 +114,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     @Input() existingController!: TmuxController
 
     private logger: Logger
+    private tmuxService: TmuxService
     private eventSubscription: Subscription | null = null
 
     // windowId → (paneId → paneTab)
@@ -140,7 +141,6 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
 
     constructor(
         injector: Injector,
-        private tmuxService: TmuxService,
         private configService: ConfigService,
         tabsService: TabsService,
         private cdr: ChangeDetectorRef,
@@ -153,6 +153,11 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
             injector.get(TabRecoveryService),
             injector
         )
+        // Resolve lazily to avoid an ES module cycle:
+        // TmuxService imports this component to open it, so importing TmuxService
+        // at module top-level makes Angular's constructor metadata read it before
+        // the service class is initialized.
+        this.tmuxService = injector.get(require('../services/tmux.service').TmuxService)
         this._tabsService = tabsService
         this.logger = log.create('tmux-session')
     }
