@@ -37,6 +37,7 @@ export const builtinPlugins = [
     'tabby-plugin-manager',
     'tabby-linkifier',
     'tabby-auto-sudo-password',
+    'tabby-tmux',
 ]
 
 export const packagesWithDocs = [
