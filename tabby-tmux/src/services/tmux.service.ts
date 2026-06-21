@@ -52,7 +52,7 @@ export interface SessionContext {
     topmostTab?: any
     /** Original index of topmostTab in app.tabs, for restoring position */
     topmostTabIndex?: number
-    sessionTab?: TmuxSessionTabComponent
+    sessionTabs: Map<number, TmuxSessionTabComponent>
     subscriptions: Subscription[]
     /** Interceptor middleware on the original session, removed on disconnect */
     outputInterceptor?: TmuxOutputInterceptor
@@ -84,30 +84,37 @@ export class TmuxService {
         return this.sessions.values().next().value?.controller || null
     }
 
-    /**
-     * Find the SessionContext that owns a given sessionTab.
-     */
+    /** Find the SessionContext that owns a given tmux window tab. */
     findContextForTab(tab: TmuxSessionTabComponent): SessionContext | undefined {
         for (const ctx of this.sessions) {
-            if (ctx.sessionTab === tab) return ctx
+            for (const sessionTab of ctx.sessionTabs.values()) {
+                if (sessionTab === tab) return ctx
+            }
         }
         return undefined
     }
 
     private setupControllerEvents(context: SessionContext): void {
         context.subscriptions.push(context.controller.events.subscribe(event => {
-            // On initialized, replace the terminal tab with the session tab
-            if (event.type === 'initialized' && !context.sessionTab) {
-                this.replaceWithSessionTab(context)
+            if (event.type === 'initialized' || event.type === 'session-changed') {
+                this.ensureWindowTabs(context)
+            } else if (event.type === 'window-add' && event.windowId !== undefined) {
+                this.ensureWindowTab(context, event.windowId)
+            } else if (event.type === 'window-close' && event.windowId !== undefined) {
+                this.removeWindowTab(context, event.windowId)
+            } else if (event.type === 'window-renamed' && event.windowId !== undefined) {
+                this.updateWindowTabTitle(context, event.windowId)
+            } else if (event.type === 'active-window-changed' && event.windowId !== undefined) {
+                const tab = context.sessionTabs.get(event.windowId)
+                if (tab && (this.appService as any).activeTab !== tab) {
+                    ;(this.appService as any).selectTab(tab)
+                }
             }
         }))
     }
 
-    private replaceWithSessionTab(context: SessionContext): void {
-        if (context.sessionTab) return
-
-        this.log.info('Creating TmuxSessionTab...')
-
+    private prepareOriginalTabReplacement(context: SessionContext): void {
+        if (context.topmostTab) return
         // Find the topmost parent tab (the actual tab listed in the top tab bar)
         const topmostTab = context.terminalTab.topmostParent || context.terminalTab
         context.topmostTab = topmostTab
@@ -116,6 +123,30 @@ export class TmuxService {
         const tabs: any[] = (this.appService as any).tabs
         const index = tabs.indexOf(topmostTab)
         context.topmostTabIndex = index
+    }
+
+    private ensureWindowTabs(context: SessionContext): void {
+        this.prepareOriginalTabReplacement(context)
+
+        for (const windowState of context.controller.getAllWindowStates()) {
+            this.ensureWindowTab(context, windowState.id)
+        }
+
+        const activeWindowId = context.controller.getActiveWindowId()
+        const activeTab = activeWindowId !== null ? context.sessionTabs.get(activeWindowId) : undefined
+        if (activeTab) {
+            ;(this.appService as any).selectTab(activeTab)
+        }
+    }
+
+    private ensureWindowTab(context: SessionContext, windowId: number): void {
+        if (context.sessionTabs.has(windowId)) {
+            this.updateWindowTabTitle(context, windowId)
+            return
+        }
+
+        this.prepareOriginalTabReplacement(context)
+        this.log.info(`Creating TmuxSessionTab for window @${windowId}...`)
 
         // IMPORTANT: We must use openNewTabRaw, NOT openNewTab.
         // openNewTab wraps non-SplitTab types in a wrapper SplitTab via wrapAndAddTab().
@@ -130,13 +161,17 @@ export class TmuxService {
             type: TmuxSessionTabComponent as any,
             inputs: {
                 existingController: context.controller,
+                windowId,
                 profile: { sessionName: context.controller.getSessionName() },
             },
         }) as TmuxSessionTabComponent
 
-        context.sessionTab = sessionTab
+        context.sessionTabs.set(windowId, sessionTab)
 
-        // Move the session tab to the same position as the original tab
+        // Move the first tmux window tab to the same position as the original tab.
+        // Later tmux window tabs stay in Tabby's normal append order.
+        const tabs: any[] = (this.appService as any).tabs
+        const index = context.topmostTabIndex ?? -1
         if (index !== -1) {
             const sessionIndex = tabs.indexOf(sessionTab)
             if (sessionIndex !== -1) {
@@ -147,6 +182,7 @@ export class TmuxService {
         }
 
         // Hide the original topmost tab
+        const topmostTab = context.topmostTab
         if (index !== -1) {
             const origIndex = tabs.indexOf(topmostTab)
             if (origIndex !== -1) {
@@ -157,8 +193,26 @@ export class TmuxService {
 
         // When the session tab is closed (by user or disconnect), clean up
         context.subscriptions.push(sessionTab.destroyed$.subscribe(() => {
-            context.sessionTab = undefined
+            if (context.sessionTabs.get(windowId) === sessionTab) {
+                context.sessionTabs.delete(windowId)
+                context.controller.killWindow(windowId).catch(() => { /* window may already be gone */ })
+            }
         }))
+    }
+
+    private removeWindowTab(context: SessionContext, windowId: number): void {
+        const tab = context.sessionTabs.get(windowId)
+        if (!tab) return
+        context.sessionTabs.delete(windowId)
+        tab.destroy()
+    }
+
+    private updateWindowTabTitle(context: SessionContext, windowId: number): void {
+        const tab = context.sessionTabs.get(windowId)
+        const windowState = context.controller.getWindowState(windowId)
+        if (tab && windowState) {
+            tab.setTmuxWindowTitle(windowState.name)
+        }
     }
 
     async disconnectContext(context: SessionContext): Promise<void> {
@@ -180,11 +234,11 @@ export class TmuxService {
 
         await context.controller.destroy()
 
-        // Destroy the session tab (removes from tab bar)
-        if (context.sessionTab) {
-            context.sessionTab.destroy()
-            context.sessionTab = undefined
+        // Destroy tmux window tabs (removes from tab bar)
+        for (const sessionTab of context.sessionTabs.values()) {
+            sessionTab.destroy()
         }
+        context.sessionTabs.clear()
 
         // Restore the original topmost tab to the tab bar at its original position
         if (context.topmostTab) {
@@ -228,6 +282,7 @@ export class TmuxService {
         const context: SessionContext = {
             controller: null!, // Set below
             terminalTab,
+            sessionTabs: new Map(),
             subscriptions: []
         }
 
@@ -272,4 +327,3 @@ export class TmuxService {
     // replaceTabWithTmuxWindow removed as we open new tabs for windows instead
 
 }
-

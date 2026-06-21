@@ -26,6 +26,12 @@ export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
         if (tab instanceof TmuxSessionTabComponent) {
             return [
                 {
+                    label: 'New Tmux Window',
+                    click: async () => {
+                        await tab.controller?.createWindow()
+                    },
+                },
+                {
                     label: 'Exit Tmux Mode',
                     click: async () => {
                         await this.tmuxService.disconnect()
@@ -100,4 +106,3 @@ export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
         await controller.killPane(paneTab.paneId)
     }
 }
-

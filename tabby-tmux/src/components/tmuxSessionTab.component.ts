@@ -13,18 +13,18 @@ export interface TmuxSessionProfile {
 }
 
 /**
- * TmuxSessionTabComponent - Manages an entire tmux session within a single Tabby tab.
+ * TmuxSessionTabComponent - Displays one tmux window as a native Tabby tab.
  *
- * Each tmux window is represented by its pane tabs, which are hidden/shown via
- * removeTab()/addTab() when switching windows. The bottom window bar provides
- * window switching UI.
+ * A tmux session can have multiple instances of this component, one per tmux
+ * window. Pane tabs are internal children used only to render the split layout.
  *
  * Layout is pixel-absolute: pane positions are computed from tmux's character
  * coordinates × cell pixel size, NOT from SplitTab's ratio-based percentage
  * layout. The SplitContainer tree is only used by addTab()/removeTab() for
  * ViewContainerRef management.
  *
- * Always created by TmuxService.attachToTerminal() with existingController set.
+ * Always created by TmuxService.attachToTerminal() with existingController and
+ * windowId set.
  */
 @Component({
     selector: 'tmux-session-tab',
@@ -35,14 +35,6 @@ export interface TmuxSessionProfile {
         <div class="pane-area" #paneAreaEl>
             <ng-container #vc></ng-container>
         </div>
-        <tmux-window-bar
-            [controller]="controller"
-            [activeWindowId]="activeWindowId"
-            (windowSwitch)="switchToWindow($event)"
-            (windowClose)="onWindowClose($event)"
-            (disconnect)="onDisconnect()"
-            (createWindow)="onCreateWindow()"
-        ></tmux-window-bar>
     `,
     styles: [`
         :host {
@@ -102,16 +94,12 @@ export interface TmuxSessionProfile {
             height: 1px;
             width: 100%;
         }
-        tmux-window-bar {
-            flex: 0 0 auto;
-            position: relative;
-            z-index: 10;
-        }
     `]
 })
 export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit, OnDestroy {
     @Input() profile: TmuxSessionProfile = {}
     @Input() existingController!: TmuxController
+    @Input() windowId!: number
 
     private logger: Logger
     private tmuxService: TmuxService
@@ -135,6 +123,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     /** Last dimensions sent to tmux, for dedup */
     private _lastSentCols = 0
     private _lastSentRows = 0
+    private _focusSubscription: Subscription | null = null
 
     /** Active divider DOM elements for the current window layout */
     private _dividerElements: HTMLElement[] = []
@@ -172,7 +161,14 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
 
         this.sessionName = this.controller.getSessionName() || this.profile.sessionName || 'default'
-        this.setTitle(`Tmux: ${this.sessionName}`)
+        this.activeWindowId = this.windowId
+        this.updateTmuxTitle()
+
+        this._focusSubscription = this.focused$.subscribe(() => {
+            if (this.controller && this.windowId !== undefined && this.controller.getActiveWindowId() !== this.windowId) {
+                this.controller.selectWindow(this.windowId).catch(() => { /* best-effort focus sync */ })
+            }
+        })
 
         // Subscribe to controller events.
         // Events are queued to ensure serial async processing — critical because
@@ -220,12 +216,8 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
             this.bootstrapFromControllerState()
             await this.eventQueue
 
-            const activeWindowId = this.controller!.getActiveWindowId()
-            const targetWindowId = (activeWindowId !== null && this.windowPaneTabs.has(activeWindowId))
-                ? activeWindowId
-                : this.controller!.getFirstWindowId()
-            if (targetWindowId !== undefined) {
-                await this.switchToWindow(targetWindowId)
+            if (this.windowId !== undefined) {
+                await this.switchToWindow(this.windowId)
             }
 
             // ── Step C: ResizeObserver + window resize ──
@@ -253,22 +245,20 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         // component may not exist yet. By the time ngOnInit runs, the controller
         // already knows about all windows and panes — we must create pane tabs
         // here so switchToWindow finds non-empty paneMaps.
-        for (const windowState of this.controller.getAllWindowStates()) {
-            if (!this.windowPaneTabs.has(windowState.id)) {
-                this.windowPaneTabs.set(windowState.id, new Map())
+        const windowState = this.controller.getWindowState(this.windowId)
+        if (windowState) {
+            if (!this.windowPaneTabs.has(this.windowId)) {
+                this.windowPaneTabs.set(this.windowId, new Map())
             }
             // Create pane tabs for all panes the controller already knows about
-            const paneMap = this.windowPaneTabs.get(windowState.id)!
-            const ctrlWindowState = this.controller.getWindowState(windowState.id)
-            if (ctrlWindowState) {
-                for (const paneId of ctrlWindowState.panes) {
-                    if (!paneMap.has(paneId)) {
-                        this.logger.info(`Bootstrap: creating pane tab for %${paneId} in window @${windowState.id}`)
-                        const paneTab = this.createPaneTab(paneId)
-                        paneTab.controller = this.controller
-                        paneTab.paneId = paneId
-                        paneMap.set(paneId, paneTab)
-                    }
+            const paneMap = this.windowPaneTabs.get(this.windowId)!
+            for (const paneId of windowState.panes) {
+                if (!paneMap.has(paneId)) {
+                    this.logger.info(`Bootstrap: creating pane tab for %${paneId} in window @${this.windowId}`)
+                    const paneTab = this.createPaneTab(paneId)
+                    paneTab.controller = this.controller
+                    paneTab.paneId = paneId
+                    paneMap.set(paneId, paneTab)
                 }
             }
         }
@@ -288,53 +278,47 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
             case 'session-changed':
                 this.connected = true
                 this.sessionName = this.controller?.getSessionName() || this.profile.sessionName || 'default'
-                this.setTitle(`Tmux: ${this.sessionName}`)
+                this.updateTmuxTitle()
                 this.cdr.detectChanges()
                 break
 
+            case 'window-renamed':
+                if (event.windowId === this.windowId) {
+                    this.updateTmuxTitle()
+                    this.cdr.detectChanges()
+                }
+                break
+
             case 'window-add':
-                if (event.windowId !== undefined) {
+                if (event.windowId !== undefined && event.windowId === this.windowId) {
                     const isNewWindow = !this.windowPaneTabs.has(event.windowId)
                     // Ensure the window has an entry in our map
                     if (isNewWindow) {
                         this.logger.info(`Adding new window @${event.windowId} to map`)
                         this.windowPaneTabs.set(event.windowId, new Map())
                     }
-                    // Switch to a new window if:
-                    // 1. No active window yet (initial attach), OR
-                    // 2. This is a genuinely new window created after attach
-                    //    AND we are past the initial bootstrap phase.
-                    //    During batch discovery, we defer switching to ngAfterViewInit.
-                    //
-                    // MUST await: switchToWindow is async and rebuilds the SplitContainer
-                    // tree. Without await, concurrent switches from multiple window-add
-                    // events (during refreshPanes) interleave and corrupt activeWindowId.
-                    if (this._initialized && this.activeWindowId === null) {
-                        this.logger.info(`Switching to first window @${event.windowId}`)
-                        await this.switchToWindow(event.windowId)
-                    } else if (this._initialized && isNewWindow && this.activeWindowId !== null) {
-                        // Runtime window creation (after initial attach)
-                        this.logger.info(`Switching to new runtime window @${event.windowId}`)
+                    if (this._initialized) {
                         await this.switchToWindow(event.windowId)
                     }
                 }
                 break
 
             case 'window-close':
-                if (event.windowId !== undefined) {
+                if (event.windowId !== undefined && event.windowId === this.windowId) {
                     await this.handleWindowClose(event.windowId)
                 }
                 break
 
             case 'pane-add':
-                if (event.paneId !== undefined && event.windowId !== undefined) {
+                if (event.paneId !== undefined && event.windowId !== undefined && event.windowId === this.windowId) {
                     this.logger.info(`Handling pane-add event: pane=${event.paneId}, window=${event.windowId}`)
                     await this.handlePaneAdd(event.paneId, event.windowId)
                 }
                 break
 
             case 'pane-update':
-                if (event.paneId !== undefined && event.windowId !== undefined) {
+                if (event.paneId !== undefined && event.windowId !== undefined &&
+                    (event.windowId === this.windowId || this.findPaneWindow(event.paneId) === this.windowId)) {
                     // Pane might have moved to a different window
                     this.logger.info(`Handling pane-update event: pane=${event.paneId}, window=${event.windowId}`)
                     await this.handlePaneUpdate(event.paneId, event.windowId)
@@ -342,14 +326,14 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
                 break
 
             case 'pane-close':
-                if (event.paneId !== undefined && event.windowId !== undefined) {
+                if (event.paneId !== undefined && event.windowId !== undefined && event.windowId === this.windowId) {
                     this.logger.info(`Handling pane-close event: pane=${event.paneId}, window=${event.windowId}`)
                     this.handlePaneClose(event.paneId, event.windowId)
                 }
                 break
 
             case 'active-pane-changed':
-                if (event.paneId !== undefined && event.windowId !== undefined) {
+                if (event.paneId !== undefined && event.windowId !== undefined && event.windowId === this.windowId) {
                     this.handleActivePaneChanged(event.paneId, event.windowId)
                 }
                 break
@@ -359,7 +343,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
                 // For non-active windows, we save the layout but don't rebuild
                 // the tree (it will be rebuilt when the user switches to it).
                 if (event.windowId !== undefined && event.data?.layout) {
-                    if (event.windowId === this.activeWindowId) {
+                    if (event.windowId === this.windowId) {
                         this.logger.info(`Syncing layout for active window @${event.windowId}`)
                         await this.syncLayout(
                             event.data.layout,
@@ -380,11 +364,11 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     }
 
     /**
-     * Switch to a different tmux window.
-     * Hides current window's panes and shows target window's panes.
+     * Mount this tab's tmux window panes.
      */
     async switchToWindow(windowId: number): Promise<void> {
-        if (windowId === this.activeWindowId) return
+        if (windowId !== this.windowId) return
+        if (windowId === this.activeWindowId && (this as any).viewRefs?.size) return
 
         this.logger.info(`Switching to window @${windowId}`)
 
@@ -404,7 +388,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
 
         // 2. Update active window
-        this.activeWindowId = windowId
+        this.activeWindowId = this.windowId
 
         // 3. Ensure pane tabs exist for this window
         if (!this.windowPaneTabs.has(windowId)) {
@@ -683,6 +667,15 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
     }
 
+    private findPaneWindow(paneId: number): number | null {
+        for (const [wid, paneMap] of this.windowPaneTabs) {
+            if (paneMap.has(paneId)) {
+                return wid
+            }
+        }
+        return null
+    }
+
     /**
      * Handle a tmux window being closed.
      *
@@ -718,10 +711,6 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
                     ? tmuxActiveId
                     : remainingWindows[0]
                 await this.switchToWindow(target)
-            } else {
-                // No windows left — clear dividers
-                this.clearDividers()
-                this.cdr.detectChanges()
             }
         }
     }
@@ -1229,9 +1218,21 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
     }
 
+    setTmuxWindowTitle(name?: string): void {
+        this.updateTmuxTitle(name)
+    }
+
+    private updateTmuxTitle(name?: string): void {
+        const windowName = name ?? this.controller?.getWindowState(this.windowId)?.name
+        this.setTitle(windowName ? `${windowName} - ${this.sessionName}` : `Tmux: ${this.sessionName}`)
+    }
+
     override ngOnDestroy(): void {
         if (this.eventSubscription) {
             this.eventSubscription.unsubscribe()
+        }
+        if (this._focusSubscription) {
+            this._focusSubscription.unsubscribe()
         }
         if (this._resizeHandler) {
             window.removeEventListener('resize', this._resizeHandler)

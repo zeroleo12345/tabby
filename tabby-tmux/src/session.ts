@@ -1022,6 +1022,10 @@ export class TmuxController {
         await this.gateway.sendCommand(`kill-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
     }
 
+    async selectWindow(windowId: number): Promise<void> {
+        await this.gateway.sendCommand(`select-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
+    }
+
     async renameWindow(windowId: number, name: string): Promise<void> {
         await this.gateway.sendCommand(
             `rename-window -t @${windowId} "${name.replace(/"/g, '\\"')}"`,
