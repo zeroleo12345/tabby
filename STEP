@@ -9,6 +9,8 @@ yarn run watch  # yarn run build
 
 yarn run start  # RUST_LOG=trace
 
+yarn run lint   # code style check
+
 
 
 # MacOS Release from local build
