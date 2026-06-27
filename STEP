@@ -44,3 +44,7 @@ xattr -r -d com.apple.quarantine Tabby.app
 - vault password: ~/Library/Application\ Support/tabby/passphrase.json
 
 - config path: ~/Library/Application\ Support/tabby/config.yaml
+
+
+# plugin folder
+cd ~/Library/Application\ Support/tabby/plugins/node_modules
