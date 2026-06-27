@@ -103,6 +103,7 @@ export class PluginManagerService {
             await this.platform.uninstallPlugin(plugin.packageName)
             this.installedPlugins = this.installedPlugins.filter(x => x.packageName !== plugin.packageName)
             this.installedPlugins.sort((a, b) => a.packageName.localeCompare(b.packageName))
+            this.config.store.pluginBlacklist = this.config.store.pluginBlacklist.filter(x => plugin.name !== x)
             await this.savePluginList()
         } catch (err) {
             this.logger.error(err)
