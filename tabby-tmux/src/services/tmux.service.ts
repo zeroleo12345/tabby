@@ -76,16 +76,16 @@ export class TmuxService {
         return createConditionalLogger(this.logger, this.configService)
     }
 
-    get isConnected(): boolean {
+    get isConnected (): boolean {
         return this.sessions.size > 0
     }
 
-    get controller(): TmuxController | null {
+    get controller (): TmuxController | null {
         return this.sessions.values().next().value?.controller || null
     }
 
     /** Find the SessionContext that owns a given tmux window tab. */
-    findContextForTab(tab: TmuxSessionTabComponent): SessionContext | undefined {
+    findContextForTab (tab: TmuxSessionTabComponent): SessionContext | undefined {
         for (const ctx of this.sessions) {
             for (const sessionTab of ctx.sessionTabs.values()) {
                 if (sessionTab === tab) return ctx
@@ -94,7 +94,7 @@ export class TmuxService {
         return undefined
     }
 
-    private setupControllerEvents(context: SessionContext): void {
+    private setupControllerEvents (context: SessionContext): void {
         context.subscriptions.push(context.controller.events.subscribe(event => {
             if (event.type === 'initialized' || event.type === 'session-changed') {
                 this.ensureWindowTabs(context)
@@ -113,7 +113,7 @@ export class TmuxService {
         }))
     }
 
-    private prepareOriginalTabReplacement(context: SessionContext): void {
+    private prepareOriginalTabReplacement (context: SessionContext): void {
         if (context.topmostTab) return
         // Find the topmost parent tab (the actual tab listed in the top tab bar)
         const topmostTab = context.terminalTab.topmostParent || context.terminalTab
@@ -125,7 +125,7 @@ export class TmuxService {
         context.topmostTabIndex = index
     }
 
-    private ensureWindowTabs(context: SessionContext): void {
+    private ensureWindowTabs (context: SessionContext): void {
         this.prepareOriginalTabReplacement(context)
 
         for (const windowState of context.controller.getAllWindowStates()) {
@@ -139,7 +139,7 @@ export class TmuxService {
         }
     }
 
-    private ensureWindowTab(context: SessionContext, windowId: number): void {
+    private ensureWindowTab (context: SessionContext, windowId: number): void {
         if (context.sessionTabs.has(windowId)) {
             this.updateWindowTabTitle(context, windowId)
             return
@@ -200,14 +200,14 @@ export class TmuxService {
         }))
     }
 
-    private removeWindowTab(context: SessionContext, windowId: number): void {
+    private removeWindowTab (context: SessionContext, windowId: number): void {
         const tab = context.sessionTabs.get(windowId)
         if (!tab) return
         context.sessionTabs.delete(windowId)
         tab.destroy()
     }
 
-    private updateWindowTabTitle(context: SessionContext, windowId: number): void {
+    private updateWindowTabTitle (context: SessionContext, windowId: number): void {
         const tab = context.sessionTabs.get(windowId)
         const windowState = context.controller.getWindowState(windowId)
         if (tab && windowState) {
@@ -215,7 +215,7 @@ export class TmuxService {
         }
     }
 
-    async disconnectContext(context: SessionContext): Promise<void> {
+    async disconnectContext (context: SessionContext): Promise<void> {
         this.sessions.delete(context)
 
         context.subscriptions.forEach(s => s.unsubscribe())
@@ -259,7 +259,7 @@ export class TmuxService {
     /**
      * Disconnect from all sessions
      */
-    async disconnect(): Promise<void> {
+    async disconnect (): Promise<void> {
         for (const context of this.sessions) {
             await this.disconnectContext(context)
         }
@@ -270,7 +270,7 @@ export class TmuxService {
      * Replaces the terminal tab with a TmuxSessionTab, keeping the terminal tab
      * hidden in context. On disconnect, the terminal tab is restored.
      */
-    async attachToTerminal(terminalTab: BaseTerminalTabComponent<any>): Promise<void> {
+    async attachToTerminal (terminalTab: BaseTerminalTabComponent<any>): Promise<void> {
         const session = terminalTab.session
         if (!session) {
             this.logger.error('Terminal tab has no session')
@@ -283,7 +283,7 @@ export class TmuxService {
             controller: null!, // Set below
             terminalTab,
             sessionTabs: new Map(),
-            subscriptions: []
+            subscriptions: [],
         }
 
         // Insert a tmux output interceptor at position 0 of the session's
@@ -320,8 +320,9 @@ export class TmuxService {
         this.setupControllerEvents(context)
 
         // Send the tmux -CC command to the terminal
-        const sessionName = this.configService.store.tmuxPlugin?.defaultSessionName ?? 'default'
-        session.write(Buffer.from(`tmux -CC new -A -s ${sessionName}\n`))
+        const sessionName = this.configService.store.tmuxPlugin?.defaultSessionName ?? 'main'
+        // session.write(Buffer.from(`tmux -CC new -A -s ${sessionName}\n`))
+        session.write(Buffer.from(`tmux -CC attach -t ${sessionName}\n`))
     }
 
     // replaceTabWithTmuxWindow removed as we open new tabs for windows instead
