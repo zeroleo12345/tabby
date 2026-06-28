@@ -40,11 +40,11 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
     /** Whether the xterm frontend has been attached and is ready. */
     private _frontendReady = false
 
-    constructor(injector: Injector) {
+    constructor (injector: Injector) {
         super(injector)
     }
 
-    ngOnInit(): void {
+    ngOnInit (): void {
         // Profile must be set BEFORE calling super.ngOnInit() because
         // the parent class configures the terminal frontend using profile settings
         this.profile = {
@@ -120,7 +120,7 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
      * we resize the xterm grid to match instead of letting xterm fit to pixels.
      * This keeps wrapping aligned with tmux and removes the resize feedback loop.
      */
-    setTmuxGrid(cols: number, rows: number): void {
+    setTmuxGrid (cols: number, rows: number): void {
         if (cols <= 0 || rows <= 0) return
         if (cols === this._tmuxCols && rows === this._tmuxRows) return
         this._tmuxCols = cols
@@ -130,7 +130,7 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
         }
     }
 
-    private applyTmuxGrid(): void {
+    private applyTmuxGrid (): void {
         const xterm = (this.frontend as any)?.xterm
         if (!xterm) return
         if (xterm.cols === this._tmuxCols && xterm.rows === this._tmuxRows) return
@@ -148,7 +148,7 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
         }
     }
 
-    async initializeSession(): Promise<void> {
+    async initializeSession (): Promise<void> {
         if (!this.controller) {
             throw new Error('Tmux controller not provided to pane tab')
         }
@@ -172,7 +172,7 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
      * When _tmuxSyncInput is enabled ("Focus all tmux panes"), input is also
      * broadcast to all other panes in the session.
      */
-    override sendInput(data: string | Buffer): void {
+    override sendInput (data: string | Buffer): void {
         if (!this._tmuxActive) {
             return
         }
@@ -192,7 +192,7 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
     /**
      * Guard paste so that only the active pane pastes into its tmux session.
      */
-    override async paste(): Promise<void> {
+    override async paste (): Promise<void> {
         if (!this._tmuxActive) {
             return
         }
@@ -205,7 +205,7 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
      * The tmux server process is not a user command — lifetime is
      * managed separately by TmuxService/TmuxController.
      */
-    override async canClose(): Promise<boolean> {
+    override async canClose (): Promise<boolean> {
         return true
     }
 

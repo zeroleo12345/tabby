@@ -63,7 +63,7 @@ export class TmuxService {
     private logger: Logger
     private sessions = new Set<SessionContext>()
 
-    constructor(
+    constructor (
         private injector: Injector,
         private appService: AppService,
         private configService: ConfigService,
@@ -300,7 +300,7 @@ export class TmuxService {
             this.injector,
             (data: string) => session.write(Buffer.from(data)),
             () => this.disconnectContext(context),
-            this.configService
+            this.configService,
         )
 
         // Subscribe to the interceptor's raw output to parse tmux control mode.
@@ -326,5 +326,4 @@ export class TmuxService {
     }
 
     // replaceTabWithTmuxWindow removed as we open new tabs for windows instead
-
 }
