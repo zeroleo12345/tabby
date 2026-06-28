@@ -87,10 +87,10 @@ export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
 
         const paneId = paneTab.paneId
         const flagMap: Record<string, string> = {
-            'right': '-h',
-            'down': '-v',
-            'left': '-h -b',
-            'up': '-v -b',
+            right: '-h',
+            down: '-v',
+            left: '-h -b',
+            up: '-v -b',
         }
         const flag = flagMap[direction]
         await controller.gateway.sendCommand(`split-window ${flag} -t %${paneId}`)
