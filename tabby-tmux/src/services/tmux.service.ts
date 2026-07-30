@@ -9,9 +9,10 @@ import { TmuxSessionTabComponent } from '../components/tmuxSessionTab.component'
 
 /**
  * Middleware inserted at position 0 of the original session's middleware chain
- * when entering tmux mode.  It captures raw output data for the tmux gateway
- * and BLOCKS it from propagating further, so that other middleware plugins
- * (e.g. trzsz) on the original session do not see tmux control mode data.
+ * while waiting for tmux control mode. It passes normal shell output through,
+ * then captures raw tmux output for the gateway and BLOCKS it from propagating
+ * further, so that other middleware plugins (e.g. trzsz) on the original
+ * session do not see tmux control mode data.
  *
  * Without this interceptor, trzsz middleware on the original session would
  * detect trzsz protocol markers embedded in %output lines and trigger
@@ -19,14 +20,79 @@ import { TmuxSessionTabComponent } from '../components/tmuxSessionTab.component'
  */
 class TmuxOutputInterceptor extends SessionMiddleware {
     private _rawOutput = new Subject<Buffer>()
+    private _controlModeDetected = new Subject<Buffer>()
+    private active = false
+    private pendingOutput = Buffer.alloc(0)
     /** Raw session output, before any middleware processing */
     rawOutput$ = this._rawOutput.asObservable()
+    /** First tmux control mode output chunk, emitted when passthrough switches to interception */
+    controlModeDetected$ = this._controlModeDetected.asObservable()
 
     feedFromSession (data: Buffer): void {
+        if (!this.active) {
+            const combined = Buffer.concat([this.pendingOutput, data])
+            const controlModeStart = this.findControlModeStart(combined)
+
+            if (controlModeStart !== -1) {
+                if (controlModeStart > 0) {
+                    super.feedFromSession(combined.subarray(0, controlModeStart))
+                }
+
+                this.pendingOutput = Buffer.alloc(0)
+                this.active = true
+                this._controlModeDetected.next(combined.subarray(controlModeStart))
+                return
+            }
+
+            const passthroughLength = this.getSafePassthroughLength(combined)
+            if (passthroughLength > 0) {
+                super.feedFromSession(combined.subarray(0, passthroughLength))
+                this.pendingOutput = combined.subarray(passthroughLength)
+            } else {
+                this.pendingOutput = combined
+            }
+            return
+        }
+
         // Capture raw data for the tmux gateway
         this._rawOutput.next(data)
         // Do NOT call super.feedFromSession() — this blocks data from
         // propagating to the rest of the middleware chain (trzsz, etc.)
+    }
+
+    flushPendingOutput (): void {
+        if (this.pendingOutput.length > 0) {
+            super.feedFromSession(this.pendingOutput)
+            this.pendingOutput = Buffer.alloc(0)
+        }
+    }
+
+    private findControlModeStart (data: Buffer): number {
+        const text = data.toString('utf-8')
+        console.log('text:', text)
+
+        const dcsMatch = /(?:\x1bP\d+p|P\d+p)%(?:begin|end|error|exit|output|extended-output|layout-change|window-add|window-close|unlinked-window-close|window-renamed|unlinked-window-renamed|session-changed|sessions-changed|session-window-changed|window-pane-changed|pane-close|unlinked-pane-close|pause|continue|no-output)\b/.exec(text)
+        if (dcsMatch) {
+            return Buffer.byteLength(text.substring(0, dcsMatch.index), 'utf-8')
+        }
+
+        const plainMatch = /(^|[\r\n])%(?:begin|end|error|exit|output|extended-output|layout-change|window-add|window-close|unlinked-window-close|window-renamed|unlinked-window-renamed|session-changed|sessions-changed|session-window-changed|window-pane-changed|pane-close|unlinked-pane-close|pause|continue|no-output)\b/.exec(text)
+        if (plainMatch) {
+            const controlLineCharIndex = plainMatch.index + plainMatch[1].length
+            return Buffer.byteLength(text.substring(0, controlLineCharIndex), 'utf-8')
+        }
+
+        return -1
+    }
+
+    private getSafePassthroughLength (data: Buffer): number {
+        const lastNewline = Math.max(data.lastIndexOf(0x0a), data.lastIndexOf(0x0d))
+        if (lastNewline !== -1) {
+            return lastNewline + 1
+        }
+
+        const maxPendingBytes = 64
+        return data.length > maxPendingBytes ? data.length - maxPendingBytes : 0
     }
 
     // feedFromTerminal is NOT overridden — terminal→session data flows
@@ -46,6 +112,7 @@ export { TmuxOutputInterceptor }
  */
 export interface SessionContext {
     controller: TmuxController
+    active?: boolean
     /** The original terminal tab, hidden while tmux is active */
     terminalTab: BaseTerminalTabComponent<any>
     /** The topmost parent Tab (SplitTabComponent or terminal tab) that was hidden */
@@ -88,7 +155,9 @@ export class TmuxService {
     findContextForTab (tab: TmuxSessionTabComponent): SessionContext | undefined {
         for (const ctx of this.sessions) {
             for (const sessionTab of ctx.sessionTabs.values()) {
-                if (sessionTab === tab) return ctx
+                if (sessionTab === tab) {
+                    return ctx
+                }
             }
         }
         return undefined
@@ -106,17 +175,20 @@ export class TmuxService {
                 this.updateWindowTabTitle(context, event.windowId)
             } else if (event.type === 'active-window-changed' && event.windowId !== undefined) {
                 const tab = context.sessionTabs.get(event.windowId)
-                if (tab && (this.appService as any).activeTab !== tab) {
-                    ;(this.appService as any).selectTab(tab)
+                const app = this.appService as any
+                if (tab && app.activeTab !== tab) {
+                    app.selectTab(tab)
                 }
             }
         }))
     }
 
     private prepareOriginalTabReplacement (context: SessionContext): void {
-        if (context.topmostTab) return
+        if (context.topmostTab) {
+            return
+        }
         // Find the topmost parent tab (the actual tab listed in the top tab bar)
-        const topmostTab = context.terminalTab.topmostParent || context.terminalTab
+        const topmostTab = context.terminalTab.topmostParent ?? context.terminalTab
         context.topmostTab = topmostTab
 
         // Remember the original index so we can replace in-place
@@ -135,7 +207,8 @@ export class TmuxService {
         const activeWindowId = context.controller.getActiveWindowId()
         const activeTab = activeWindowId !== null ? context.sessionTabs.get(activeWindowId) : undefined
         if (activeTab) {
-            ;(this.appService as any).selectTab(activeTab)
+            const app = this.appService as any
+            app.selectTab(activeTab)
         }
     }
 
@@ -202,7 +275,9 @@ export class TmuxService {
 
     private removeWindowTab (context: SessionContext, windowId: number): void {
         const tab = context.sessionTabs.get(windowId)
-        if (!tab) return
+        if (!tab) {
+            return
+        }
         context.sessionTabs.delete(windowId)
         tab.destroy()
     }
@@ -220,11 +295,15 @@ export class TmuxService {
 
         context.subscriptions.forEach(s => s.unsubscribe())
 
-        // Detach from tmux control mode so the tmux client process exits
-        // cleanly. Without this, the original terminal tab's PTY still has
-        // a running `tmux -CC attach` process, causing "tmux is still running"
-        // confirmation dialogs when the user tries to close the restored tab.
-        context.controller.gateway.detach()
+        if (context.active) {
+            // Detach from tmux control mode so the tmux client process exits
+            // cleanly. Without this, the original terminal tab's PTY still has
+            // a running `tmux -CC attach` process, causing "tmux is still running"
+            // confirmation dialogs when the user tries to close the restored tab.
+            context.controller.gateway.detach()
+        } else {
+            context.outputInterceptor?.flushPendingOutput()
+        }
 
         // Remove the output interceptor from the original session's middleware chain
         if (context.outputInterceptor) {
@@ -232,7 +311,9 @@ export class TmuxService {
             context.outputInterceptor = undefined
         }
 
-        await context.controller.destroy()
+        if (context.active) {
+            await context.controller.destroy()
+        }
 
         // Destroy tmux window tabs (removes from tab bar)
         for (const sessionTab of context.sessionTabs.values()) {
@@ -247,10 +328,11 @@ export class TmuxService {
                 ? Math.min(context.topmostTabIndex, tabs.length)
                 : tabs.length
             tabs.splice(insertAt, 0, context.topmostTab)
-            ;(this.appService as any).tabsChanged.next()
+            const app = this.appService as any
+            app.tabsChanged.next()
 
             // Activate the restored tab
-            ;(this.appService as any).selectTab(context.topmostTab)
+            app.selectTab(context.topmostTab)
         }
 
         this.log.info('Disconnected tmux context')
@@ -266,9 +348,9 @@ export class TmuxService {
     }
 
     /**
-     * Attach to tmux from an existing terminal tab.
-     * Replaces the terminal tab with a TmuxSessionTab, keeping the terminal tab
-     * hidden in context. On disconnect, the terminal tab is restored.
+     * Watch an existing terminal tab for tmux control mode.
+     * The terminal is replaced with a TmuxSessionTab only after tmux emits its
+     * first control mode message. On disconnect, the terminal tab is restored.
      */
     async attachToTerminal (terminalTab: BaseTerminalTabComponent<any>): Promise<void> {
         const session = terminalTab.session
@@ -277,10 +359,16 @@ export class TmuxService {
             return
         }
 
-        this.log.info('Attaching tmux to existing terminal session')
+        if ([...this.sessions].some(x => x.terminalTab === terminalTab)) {
+            this.log.info('Tmux listener already attached to this terminal session')
+            return
+        }
+
+        this.log.info('Waiting for tmux control mode on existing terminal session')
 
         const context: SessionContext = {
             controller: null!, // Set below
+            active: false,
             terminalTab,
             sessionTabs: new Map(),
             subscriptions: [],
@@ -294,20 +382,34 @@ export class TmuxService {
         session.middleware.unshift(interceptor)
         context.outputInterceptor = interceptor
 
-        // Create a controller that uses the terminal's session for I/O
-        context.controller = new TmuxController(
-            this.logger,
-            this.injector,
-            (data: string) => session.write(Buffer.from(data)),
-            () => this.disconnectContext(context),
-            this.configService,
-        )
+        this.sessions.add(context)
 
-        // Subscribe to the interceptor's raw output to parse tmux control mode.
-        // Feed raw buffers directly — the gateway handles line buffering internally
-        // via executeData(), which properly handles TCP fragment boundaries.
-        context.subscriptions.push(interceptor.rawOutput$.subscribe((data: Buffer) => {
-            context.controller.handleData(data)
+        context.subscriptions.push(interceptor.controlModeDetected$.subscribe((initialData: Buffer) => {
+            if (context.active) {
+                return
+            }
+
+            this.log.info('Detected tmux control mode output, activating tmux UI')
+            context.active = true
+
+            // Create a controller that uses the terminal's session for I/O
+            context.controller = new TmuxController(
+                this.logger,
+                this.injector,
+                (payload: string) => session.write(Buffer.from(payload)),
+                () => this.disconnectContext(context),
+                this.configService,
+            )
+
+            // Subscribe to the interceptor's raw output to parse tmux control mode.
+            // Feed raw buffers directly — the gateway handles line buffering internally
+            // via executeData(), which properly handles TCP fragment boundaries.
+            context.subscriptions.push(interceptor.rawOutput$.subscribe((chunk: Buffer) => {
+                context.controller.handleData(chunk)
+            }))
+
+            this.setupControllerEvents(context)
+            context.controller.handleData(initialData)
         }))
 
         // Handle terminal tab closure (disconnect on close)
@@ -315,14 +417,6 @@ export class TmuxService {
             this.log.info('Attached terminal tab closed, disconnecting session')
             this.disconnectContext(context)
         }))
-
-        this.sessions.add(context)
-        this.setupControllerEvents(context)
-
-        // Send the tmux -CC command to the terminal
-        const sessionName = this.configService.store.tmuxPlugin?.defaultSessionName ?? 'main'
-        // session.write(Buffer.from(`tmux -CC new -A -s ${sessionName}\n`))
-        session.write(Buffer.from(`tmux -CC attach -t ${sessionName}\n`))
     }
 
     // replaceTabWithTmuxWindow removed as we open new tabs for windows instead
