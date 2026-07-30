@@ -301,7 +301,10 @@ export class TmuxService {
             inputs: {
                 existingController: context.controller,
                 windowId,
-                profile: { sessionName: context.controller.getSessionName() },
+                profile: {
+                    sessionName: context.controller.getSessionName(),
+                    terminalColorScheme: context.terminalTab.profile.terminalColorScheme,
+                },
             },
         }) as TmuxSessionTabComponent
 

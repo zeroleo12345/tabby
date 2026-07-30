@@ -2,6 +2,7 @@ import { Component, Injector, Input, OnInit, OnDestroy, ChangeDetectorRef, Eleme
 import { Subscription } from 'rxjs'
 import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
+import { TerminalColorScheme } from 'tabby-terminal'
 import { TmuxController } from '../session'
 import type { TmuxService } from '../services/tmux.service'
 import { TMUX_COMMAND_TOLERATE_ERRORS } from '../gateway'
@@ -10,6 +11,7 @@ import { parseTmuxLayout, TmuxLayoutNode, flattenLayout } from '../layoutParser'
 
 export interface TmuxSessionProfile {
     sessionName?: string
+    terminalColorScheme?: TerminalColorScheme | null
 }
 
 /**
@@ -56,11 +58,6 @@ export interface TmuxSessionProfile {
         ::ng-deep .pane-area > .child {
             position: absolute;
             box-sizing: border-box;
-            opacity: .75;
-            transition: opacity 0.125s;
-        }
-        ::ng-deep .pane-area > .child.focused {
-            opacity: 1;
         }
         /* Independent divider elements for pane boundaries + resize dragging.
            Width/height is set inline to 1 cell to match tmux's 1-char separator.
@@ -576,6 +573,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
             inputs: {
                 controller: this.controller,
                 paneId,
+                terminalColorScheme: this.profile.terminalColorScheme ?? null,
             },
         }) as any as TmuxPaneTabComponent
         this.logger.info(`TmuxPaneTabComponent created for pane %${paneId}`)

@@ -1,6 +1,6 @@
 import { Component, Injector, Input, OnInit } from '@angular/core'
 import { first } from 'rxjs'
-import { BaseTerminalTabComponent } from 'tabby-terminal'
+import { BaseTerminalTabComponent, TerminalColorScheme } from 'tabby-terminal'
 import { MenuItemOptions } from 'tabby-core'
 import { TmuxController, TmuxPaneSession } from '../session'
 
@@ -16,6 +16,7 @@ import { TmuxController, TmuxPaneSession } from '../session'
 export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implements OnInit {
     @Input() controller: TmuxController
     @Input() paneId: number
+    @Input() terminalColorScheme: TerminalColorScheme | null = null
 
     /**
      * Whether this pane is the active (keyboard-focused) pane in the tmux session.
@@ -53,7 +54,7 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
             options: {},
             // Required properties for BaseTerminalTabComponent
             behaviorOnSessionEnd: 'close',
-            terminalColorScheme: null,  // Use default
+            terminalColorScheme: this.terminalColorScheme,
         }
         this.setTitle(`Pane %${this.paneId}`)
 
