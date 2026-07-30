@@ -3,9 +3,11 @@ import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import TabbyCoreModule, { TabContextMenuItemProvider, ConfigProvider } from 'tabby-core'
 import { SettingsTabProvider } from 'tabby-settings'
+import { TerminalDecorator } from 'tabby-terminal'
 import { TmuxContextMenuProvider } from './tabContextMenu'
 import { TmuxConfigProvider } from './config'
 import { TmuxSettingsTabProvider } from './settings'
+import { TmuxDecorator } from './decorator'
 import { TmuxPaneTabComponent } from './components/tmuxPaneTab.component'
 import { TmuxSessionTabComponent } from './components/tmuxSessionTab.component'
 import { TmuxWindowBarComponent } from './components/tmuxWindowBar.component'
@@ -19,6 +21,7 @@ import { TmuxSettingsTabComponent } from './components/settings.component'
     ],
     providers: [
         { provide: TabContextMenuItemProvider, useClass: TmuxContextMenuProvider, multi: true },
+        { provide: TerminalDecorator, useClass: TmuxDecorator, multi: true },
         { provide: ConfigProvider, useClass: TmuxConfigProvider, multi: true },
         { provide: SettingsTabProvider, useClass: TmuxSettingsTabProvider, multi: true },
     ],
@@ -35,4 +38,3 @@ import { TmuxSettingsTabComponent } from './components/settings.component'
     ],
 })
 export default class TmuxModule { }
-

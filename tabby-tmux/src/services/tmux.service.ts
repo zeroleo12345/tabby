@@ -1,7 +1,7 @@
 import { Injectable, Injector } from '@angular/core'
 import { AppService, LogService, Logger, ConfigService } from 'tabby-core'
 import { createConditionalLogger, ConditionalLogger } from '../logHelper'
-import { BaseTerminalTabComponent, SessionMiddleware } from 'tabby-terminal'
+import { BaseSession, BaseTerminalTabComponent, SessionMiddleware } from 'tabby-terminal'
 import { Subject, Subscription } from 'rxjs'
 import { TmuxController } from '../session'
 
@@ -86,13 +86,66 @@ class TmuxOutputInterceptor extends SessionMiddleware {
     }
 
     private getSafePassthroughLength (data: Buffer): number {
-        const lastNewline = Math.max(data.lastIndexOf(0x0a), data.lastIndexOf(0x0d))
-        if (lastNewline !== -1) {
-            return lastNewline + 1
+        return data.length - this.getPotentialControlModePrefixLength(data)
+    }
+
+    /**
+     * Keep only a tiny suffix that could become a tmux control mode marker when
+     * the next output chunk arrives. Holding arbitrary bytes here delays normal
+     * shell prompts because prompts usually do not end with a newline.
+     */
+    private getPotentialControlModePrefixLength (data: Buffer): number {
+        const maxPrefixBytes = Math.min(data.length, 64)
+        for (let start = data.length - 1; start >= data.length - maxPrefixBytes; start--) {
+            const suffix = data.subarray(start).toString('utf-8')
+            const atLineStart = start === 0 || data[start - 1] === 0x0a || data[start - 1] === 0x0d
+            if (this.isPotentialControlModePrefix(suffix, atLineStart)) {
+                return data.length - start
+            }
+        }
+        return 0
+    }
+
+    private isPotentialControlModePrefix (text: string, atLineStart: boolean): boolean {
+        const commands = [
+            'begin',
+            'end',
+            'error',
+            'exit',
+            'output',
+            'extended-output',
+            'layout-change',
+            'window-add',
+            'window-close',
+            'unlinked-window-close',
+            'window-renamed',
+            'unlinked-window-renamed',
+            'session-changed',
+            'sessions-changed',
+            'session-window-changed',
+            'window-pane-changed',
+            'pane-close',
+            'unlinked-pane-close',
+            'pause',
+            'continue',
+            'no-output',
+        ]
+
+        if (text === '\x1b' || /^\x1bP\d*$/.test(text) || /^\x1bP\d+p%?$/.test(text)) {
+            return true
         }
 
-        const maxPendingBytes = 64
-        return data.length > maxPendingBytes ? data.length - maxPendingBytes : 0
+        const dcsMatch = /^\x1bP\d+p%(.*)$/.exec(text)
+        if (dcsMatch) {
+            return commands.some(command => command.startsWith(dcsMatch[1]))
+        }
+
+        const plainText = text[0] === '\r' || text[0] === '\n' ? text.slice(1) : text
+        if ((atLineStart || text[0] === '\r' || text[0] === '\n') && plainText.startsWith('%')) {
+            return commands.some(command => command.startsWith(plainText.slice(1)))
+        }
+
+        return false
     }
 
     // feedFromTerminal is NOT overridden — terminal→session data flows
@@ -115,6 +168,8 @@ export interface SessionContext {
     active?: boolean
     /** The original terminal tab, hidden while tmux is active */
     terminalTab: BaseTerminalTabComponent<any>
+    /** The concrete terminal session where the interceptor was installed */
+    session: BaseSession
     /** The topmost parent Tab (SplitTabComponent or terminal tab) that was hidden */
     topmostTab?: any
     /** Original index of topmostTab in app.tabs, for restoring position */
@@ -144,11 +199,11 @@ export class TmuxService {
     }
 
     get isConnected (): boolean {
-        return this.sessions.size > 0
+        return [...this.sessions].some(x => x.active)
     }
 
     get controller (): TmuxController | null {
-        return this.sessions.values().next().value?.controller || null
+        return [...this.sessions].find(x => x.active)?.controller || null
     }
 
     /** Find the SessionContext that owns a given tmux window tab. */
@@ -307,7 +362,7 @@ export class TmuxService {
 
         // Remove the output interceptor from the original session's middleware chain
         if (context.outputInterceptor) {
-            context.terminalTab.session?.middleware.remove(context.outputInterceptor)
+            context.session.middleware.remove(context.outputInterceptor)
             context.outputInterceptor = undefined
         }
 
@@ -339,10 +394,10 @@ export class TmuxService {
     }
 
     /**
-     * Disconnect from all sessions
+     * Disconnect from all active tmux sessions.
      */
     async disconnect (): Promise<void> {
-        for (const context of this.sessions) {
+        for (const context of [...this.sessions].filter(x => x.active)) {
             await this.disconnectContext(context)
         }
     }
@@ -359,9 +414,13 @@ export class TmuxService {
             return
         }
 
-        if ([...this.sessions].some(x => x.terminalTab === terminalTab)) {
-            this.log.info('Tmux listener already attached to this terminal session')
-            return
+        const existingContext = [...this.sessions].find(x => x.terminalTab === terminalTab)
+        if (existingContext) {
+            if (existingContext.session === session) {
+                this.log.info('Tmux listener already attached to this terminal session')
+                return
+            }
+            await this.disconnectContext(existingContext)
         }
 
         this.log.info('Waiting for tmux control mode on existing terminal session')
@@ -370,6 +429,7 @@ export class TmuxService {
             controller: null!, // Set below
             active: false,
             terminalTab,
+            session,
             sessionTabs: new Map(),
             subscriptions: [],
         }
@@ -415,6 +475,11 @@ export class TmuxService {
         // Handle terminal tab closure (disconnect on close)
         context.subscriptions.push(terminalTab.destroyed$.subscribe(() => {
             this.log.info('Attached terminal tab closed, disconnecting session')
+            this.disconnectContext(context)
+        }))
+
+        context.subscriptions.push(session.destroyed$.subscribe(() => {
+            this.log.info('Attached terminal session destroyed, disconnecting tmux listener')
             this.disconnectContext(context)
         }))
     }
