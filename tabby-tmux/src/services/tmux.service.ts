@@ -180,6 +180,17 @@ export interface SessionContext {
     outputInterceptor?: TmuxOutputInterceptor
 }
 
+interface DisconnectOptions {
+    /**
+     * Send a tmux control-mode detach command before tearing down the UI.
+     * Should be false when tmux has already sent %exit, because the client may
+     * have returned to the shell and would receive "detach" as a user command.
+     */
+    detach?: boolean
+    /** Reinstall the passive control-mode listener after restoring the shell tab. */
+    rearm?: boolean
+}
+
 @Injectable({ providedIn: 'root' })
 export class TmuxService {
     private logger: Logger
@@ -345,12 +356,15 @@ export class TmuxService {
         }
     }
 
-    async disconnectContext (context: SessionContext): Promise<void> {
+    async disconnectContext (context: SessionContext, options: DisconnectOptions = {}): Promise<void> {
+        const detach = options.detach ?? true
+        const rearm = options.rearm ?? false
+
         this.sessions.delete(context)
 
         context.subscriptions.forEach(s => s.unsubscribe())
 
-        if (context.active) {
+        if (context.active && detach) {
             // Detach from tmux control mode so the tmux client process exits
             // cleanly. Without this, the original terminal tab's PTY still has
             // a running `tmux -CC attach` process, causing "tmux is still running"
@@ -391,6 +405,10 @@ export class TmuxService {
         }
 
         this.log.info('Disconnected tmux context')
+
+        if (rearm && context.terminalTab.session === context.session && context.session.open) {
+            await this.attachToTerminal(context.terminalTab)
+        }
     }
 
     /**
@@ -457,7 +475,7 @@ export class TmuxService {
                 this.logger,
                 this.injector,
                 (payload: string) => session.write(Buffer.from(payload)),
-                () => this.disconnectContext(context),
+                () => this.disconnectContext(context, { detach: false, rearm: true }),
                 this.configService,
             )
 
