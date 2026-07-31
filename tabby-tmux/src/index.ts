@@ -12,6 +12,7 @@ import { TmuxPaneTabComponent } from './components/tmuxPaneTab.component'
 import { TmuxSessionTabComponent } from './components/tmuxSessionTab.component'
 import { TmuxWindowBarComponent } from './components/tmuxWindowBar.component'
 import { TmuxSettingsTabComponent } from './components/settings.component'
+import { TmuxRenameWindowModalComponent } from './components/tmuxRenameWindowModal.component'
 
 @NgModule({
     imports: [
@@ -30,11 +31,13 @@ import { TmuxSettingsTabComponent } from './components/settings.component'
         TmuxSessionTabComponent,
         TmuxWindowBarComponent,
         TmuxSettingsTabComponent,
+        TmuxRenameWindowModalComponent,
     ],
     entryComponents: [
         TmuxPaneTabComponent,
         TmuxSessionTabComponent,
         TmuxSettingsTabComponent,
+        TmuxRenameWindowModalComponent,
     ],
 })
 export default class TmuxModule {

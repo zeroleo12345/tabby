@@ -1,13 +1,14 @@
 import { Component, Injector, Input, OnInit, OnDestroy, ChangeDetectorRef, ElementRef } from '@angular/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import { Subscription } from 'rxjs'
-import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService, PromptModalComponent } from 'tabby-core'
+import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
 import { TerminalColorScheme } from 'tabby-terminal'
 import { TmuxController } from '../session'
 import type { TmuxService } from '../services/tmux.service'
 import { TMUX_COMMAND_TOLERATE_ERRORS } from '../gateway'
 import { TmuxPaneTabComponent } from './tmuxPaneTab.component'
+import { TmuxRenameWindowModalComponent } from './tmuxRenameWindowModal.component'
 import { parseTmuxLayout, TmuxLayoutNode, flattenLayout } from '../layoutParser'
 
 export interface TmuxSessionProfile {
@@ -1261,12 +1262,11 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
             return
         }
 
-        const modal = this._ngbModal.open(PromptModalComponent)
+        const modal = this._ngbModal.open(TmuxRenameWindowModalComponent)
         modal.componentInstance.value = this.controller.getWindowState(this.windowId)?.name ?? ''
-        modal.componentInstance.prompt = 'Window name'
 
         const result = await modal.result.catch(() => null)
-        const name = typeof result?.value === 'string' ? result.value.trim() : ''
+        const name = typeof result === 'string' ? result.trim() : ''
         if (name) {
             await this.controller.renameWindow(this.windowId, name)
         }
