@@ -69,7 +69,7 @@ class TmuxOutputInterceptor extends SessionMiddleware {
 
     private findControlModeStart (data: Buffer): number {
         const text = data.toString('utf-8')
-        console.log('text:', text)
+        // console.log('text:', text)
 
         const dcsMatch = /(?:\x1bP\d+p|P\d+p)%(?:begin|end|error|exit|output|extended-output|layout-change|window-add|window-close|unlinked-window-close|window-renamed|unlinked-window-renamed|session-changed|sessions-changed|session-window-changed|window-pane-changed|pane-close|unlinked-pane-close|pause|continue|no-output)\b/.exec(text)
         if (dcsMatch) {
