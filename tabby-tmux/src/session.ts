@@ -1128,19 +1128,16 @@ export class TmuxController {
         return this.activePaneId
     }
 
-    private async getPaneCurrentPath (paneId: number | null): Promise<string | null> {
-        if (paneId === null) {
-            return null
-        }
-
+    private async getPaneCurrentPath (paneId?: number | null): Promise<string | null> {
         try {
+            const target = paneId !== undefined && paneId !== null ? ` -t %${paneId}` : ''
             const result = await this.gateway.sendCommand(
-                `display-message -p -t %${paneId} "#{pane_current_path}"`,
+                `display-message -p${target} "#{pane_current_path}"`,
                 TMUX_COMMAND_TOLERATE_ERRORS
             )
             return result.trim() || null
         } catch (e) {
-            this.logger.warn(`Failed to get current path for pane %${paneId}:`, e)
+            this.logger.warn(`Failed to get current path${paneId !== undefined && paneId !== null ? ` for pane %${paneId}` : ''}:`, e)
             return null
         }
     }
