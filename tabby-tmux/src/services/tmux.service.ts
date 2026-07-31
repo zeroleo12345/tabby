@@ -349,7 +349,7 @@ export class TmuxService {
         context.subscriptions.push(sessionTab.destroyed$.subscribe(() => {
             if (context.sessionTabs.get(windowId) === sessionTab) {
                 context.sessionTabs.delete(windowId)
-                context.controller.killWindow(windowId).catch(() => { /* window may already be gone */ })
+                // context.controller.killWindow(windowId).catch(() => { /* window may already be gone */ })
             }
         }))
     }
