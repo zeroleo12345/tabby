@@ -286,6 +286,9 @@ export class TmuxService {
 
         this.prepareOriginalTabReplacement(context)
         this.log.info(`Creating TmuxSessionTab for window @${windowId}...`)
+        const app = this.appService as any
+        const previousActiveTab = app.activeTab
+        const isFirstWindowTab = context.sessionTabs.size === 0
 
         // IMPORTANT: We must use openNewTabRaw, NOT openNewTab.
         // openNewTab wraps non-SplitTab types in a wrapper SplitTab via wrapAndAddTab().
@@ -296,7 +299,7 @@ export class TmuxService {
         //
         // openNewTabRaw adds the tab directly without wrapping, so our component's
         // view is properly attached and lifecycle hooks execute normally.
-        const sessionTab = (this.appService as any).openNewTabRaw({
+        const sessionTab = app.openNewTabRaw({
             type: TmuxSessionTabComponent as any,
             inputs: {
                 existingController: context.controller,
@@ -311,15 +314,25 @@ export class TmuxService {
         context.sessionTabs.set(windowId, sessionTab)
 
         // Move the first tmux window tab to the same position as the original tab.
-        // Later tmux window tabs stay in Tabby's normal append order.
-        const tabs: any[] = (this.appService as any).tabs
+        // Later tmux window tabs are inserted immediately to the right of the
+        // tab that was active when the new tmux window was created.
+        const tabs: any[] = app.tabs
         const index = context.topmostTabIndex ?? -1
-        if (index !== -1) {
+        if (isFirstWindowTab && index !== -1) {
             const sessionIndex = tabs.indexOf(sessionTab)
             if (sessionIndex !== -1) {
                 tabs.splice(sessionIndex, 1)       // remove from end
                 tabs.splice(index, 0, sessionTab)  // insert at original position
-                ;(this.appService as any).tabsChanged.next()
+                app.tabsChanged.next()
+            }
+        } else {
+            const previousIndex = tabs.indexOf(previousActiveTab)
+            const sessionIndex = tabs.indexOf(sessionTab)
+            if (previousIndex !== -1 && sessionIndex !== -1 && sessionIndex !== previousIndex + 1) {
+                tabs.splice(sessionIndex, 1)
+                const targetIndex = tabs.indexOf(previousActiveTab) + 1
+                tabs.splice(targetIndex, 0, sessionTab)
+                app.tabsChanged.next()
             }
         }
 
