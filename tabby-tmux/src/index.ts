@@ -43,13 +43,15 @@ export default class TmuxModule {
         app: AppService,
     ) {
         hotkeys.hotkey$.subscribe(async hotkey => {
-            if (hotkey !== 'duplicate-tab') {
+            const activeTab = app.activeTab
+            if (!(activeTab instanceof TmuxSessionTabComponent)) {
                 return
             }
 
-            const activeTab = app.activeTab
-            if (activeTab instanceof TmuxSessionTabComponent) {
+            if (hotkey === 'duplicate-tab') {
                 await activeTab.onDuplicateWindow()
+            } else if (hotkey === 'rename-tab' || hotkey === 'rename-ta') {
+                await activeTab.onRenameWindow()
             }
         })
     }

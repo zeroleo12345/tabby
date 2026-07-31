@@ -1078,7 +1078,7 @@ export class TmuxController {
 
     async renameWindow (windowId: number, name: string): Promise<void> {
         await this.gateway.sendCommand(
-            `rename-window -t @${windowId} "${name.replace(/"/g, '\\"')}"`,
+            `rename-window -t @${windowId} "${this.escapeTmuxString(name)}"`,
             TMUX_COMMAND_TOLERATE_ERRORS
         )
     }

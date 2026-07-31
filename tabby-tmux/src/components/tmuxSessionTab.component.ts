@@ -1,6 +1,7 @@
 import { Component, Injector, Input, OnInit, OnDestroy, ChangeDetectorRef, ElementRef } from '@angular/core'
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import { Subscription } from 'rxjs'
-import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
+import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService, PromptModalComponent } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
 import { TerminalColorScheme } from 'tabby-terminal'
 import { TmuxController } from '../session'
@@ -120,6 +121,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     private _resizeHandler: (() => void) | null = null
     private _resizeTimer: any = null
     private _paneAreaObserver: ResizeObserver | null = null
+    private _ngbModal: NgbModal
     /** Last dimensions sent to tmux, for dedup */
     private _lastSentCols = 0
     private _lastSentRows = 0
@@ -148,6 +150,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         // the service class is initialized.
         this.tmuxService = injector.get(require('../services/tmux.service').TmuxService)
         this._tabsService = tabsService
+        this._ngbModal = injector.get(NgbModal)
         this.logger = log.create('tmux-session')
     }
 
@@ -498,6 +501,15 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
      */
     override layout(): void {
         // Intentionally empty — pixel-absolute layout replaces SplitTab layout.
+    }
+
+    /**
+     * SplitTabComponent normally derives its title from child pane titles.
+     * TmuxSessionTab represents a tmux window, so its tab title must stay bound
+     * to tmux's window name instead of being overwritten by "Pane %N".
+     */
+    protected override updateTitle(): void {
+        this.updateTmuxTitle()
     }
 
     /**
@@ -1244,13 +1256,29 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
     }
 
+    async onRenameWindow(): Promise<void> {
+        if (!this.controller) {
+            return
+        }
+
+        const modal = this._ngbModal.open(PromptModalComponent)
+        modal.componentInstance.value = this.controller.getWindowState(this.windowId)?.name ?? ''
+        modal.componentInstance.prompt = 'Window name'
+
+        const result = await modal.result.catch(() => null)
+        const name = typeof result?.value === 'string' ? result.value.trim() : ''
+        if (name) {
+            await this.controller.renameWindow(this.windowId, name)
+        }
+    }
+
     setTmuxWindowTitle(name?: string): void {
         this.updateTmuxTitle(name)
     }
 
     private updateTmuxTitle(name?: string): void {
         const windowName = name ?? this.controller?.getWindowState(this.windowId)?.name
-        this.setTitle(windowName ? `${windowName} - ${this.sessionName}` : `Tmux: ${this.sessionName}`)
+        this.setTitle(windowName || `Tmux: ${this.sessionName}`)
     }
 
     override ngOnDestroy(): void {

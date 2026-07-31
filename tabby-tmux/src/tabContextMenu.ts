@@ -45,6 +45,12 @@ export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
                     },
                 },
                 {
+                    label: 'Rename Tmux Window',
+                    click: async () => {
+                        await tab.onRenameWindow()
+                    },
+                },
+                {
                     label: 'Exit Tmux Mode',
                     click: async () => {
                         await this.tmuxService.disconnect()
