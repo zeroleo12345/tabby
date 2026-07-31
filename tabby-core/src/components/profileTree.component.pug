@@ -4,7 +4,7 @@
     input.form-control.form-control-sm.mb-1(
         type='text',
         [(ngModel)]='filter',
-        placeholder='Filter',
+        [placeholder]='"Filter"|translate',
         (ngModelChange)='onFilterChange()'
     )
 

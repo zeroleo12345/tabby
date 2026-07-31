@@ -62,6 +62,7 @@ ipcRenderer.once('start', async (_$event, bootstrapData: BootstrapData) => {
     let plugins = await findPlugins()
     bootstrapData.installedPlugins = plugins
     if (bootstrapData.config.pluginBlacklist) {
+        console.log('Plugin blacklist:', bootstrapData.config.pluginBlacklist)
         plugins = plugins.filter(x => !bootstrapData.config.pluginBlacklist.includes(x.name))
     }
     plugins = plugins.filter(x => x.name !== 'web')
