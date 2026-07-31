@@ -49,7 +49,7 @@ export default class TmuxModule {
 
             const activeTab = app.activeTab
             if (activeTab instanceof TmuxSessionTabComponent) {
-                await activeTab.onCreateWindow()
+                await activeTab.onDuplicateWindow()
             }
         })
     }

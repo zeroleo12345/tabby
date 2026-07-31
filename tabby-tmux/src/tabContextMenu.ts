@@ -32,6 +32,12 @@ export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
                     },
                 },
                 {
+                    label: 'Duplicate Tmux Window',
+                    click: async () => {
+                        await tab.onDuplicateWindow()
+                    },
+                },
+                {
                     label: 'Exit Tmux Mode',
                     click: async () => {
                         await this.tmuxService.disconnect()

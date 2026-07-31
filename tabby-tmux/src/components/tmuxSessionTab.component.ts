@@ -112,6 +112,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
 
     controller: TmuxController | null = null
     activeWindowId: number | null = null
+    activePaneId: number | null = null
     connected = false
     sessionName = ''
     private _initialized = false
@@ -511,6 +512,9 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     override focus(tab: any): void {
         ;(this as any).focusedTab = tab
         tab.emitFocused()
+        if (tab instanceof TmuxPaneTabComponent) {
+            this.activePaneId = tab.paneId
+        }
         // Mark only the focused pane as active for hotkey routing.
         // Other panes remain visible and initialized but won't process
         // hotkey-triggered input (Ctrl+C, paste, etc.).
@@ -739,6 +743,9 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
         const displayPanes = flattenLayout(displayTree)
         const displayPaneIds = new Set(displayPanes.map(p => p.paneId))
+        if (this.activePaneId === null && displayPanes.length > 0) {
+            this.activePaneId = displayPanes[0].paneId
+        }
 
         // Full pane list from layout (always the real multi-pane layout)
         const fullTree = parseTmuxLayout(layoutStr)
@@ -857,6 +864,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
      */
     private handleActivePaneChanged(paneId: number, windowId: number): void {
         if (windowId !== this.activeWindowId) return
+        this.activePaneId = paneId
 
         const paneMap = this.windowPaneTabs.get(windowId)
         if (!paneMap) return
@@ -1212,6 +1220,15 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     async onCreateWindow(): Promise<void> {
         if (this.controller) {
             const newWindowId = await this.controller.createWindow()
+            if (newWindowId !== null) {
+                await this.switchToWindow(newWindowId)
+            }
+        }
+    }
+
+    async onDuplicateWindow(): Promise<void> {
+        if (this.controller) {
+            const newWindowId = await this.controller.duplicateWindow(this.activePaneId ?? undefined)
             if (newWindowId !== null) {
                 await this.switchToWindow(newWindowId)
             }

@@ -243,6 +243,7 @@ export class TmuxController {
     private sessionId = -1
     private attached = false
     private activeWindowId: number | null = null
+    private activePaneId: number | null = null
 
     public gateway: TmuxGateway
     public events = new Subject<{ type: string; paneId?: number; windowId?: number; data?: any }>()
@@ -386,6 +387,7 @@ export class TmuxController {
         // the next pane and sends %window-pane-changed).
         this.gateway.paneChanged$.subscribe(({ windowId, paneId }) => {
             this.log.info(`Active pane changed to %${paneId} in window @${windowId}`)
+            this.activePaneId = paneId
             this.events.next({ type: 'active-pane-changed', paneId, windowId })
         })
 
@@ -470,7 +472,7 @@ export class TmuxController {
 
             // Step 2: Discover all panes and map to windows
             const paneResult = await this.gateway.sendCommand(
-                'list-panes -s -F "#{pane_id} #{window_id}"',
+                'list-panes -s -F "#{pane_id} #{window_id} #{pane_active}"',
                 TMUX_COMMAND_TOLERATE_ERRORS
             )
             const paneLines = paneResult.split(/[\r\n]+/).map(l => l.trim()).filter(l => l)
@@ -478,10 +480,11 @@ export class TmuxController {
 
             const newPaneIds: Array<{ paneId: number; windowId: number }> = []
             for (const line of paneLines) {
-                const match = line.match(/^%?(\d+)\s+@?(\d+)$/)
+                const match = line.match(/^%?(\d+)\s+@?(\d+)(?:\s+([01]))?$/)
                 if (match) {
                     const paneId = parseInt(match[1])
                     const windowId = parseInt(match[2])
+                    const active = match[3] === '1'
 
                     let windowState = this.windowStates.get(windowId)
                     if (!windowState) {
@@ -498,6 +501,10 @@ export class TmuxController {
                     if (!this.knownPanes.has(paneId)) {
                         this.knownPanes.add(paneId)
                         newPaneIds.push({ paneId, windowId })
+                    }
+
+                    if (active && windowId === this.activeWindowId) {
+                        this.activePaneId = paneId
                     }
                 }
             }
@@ -1015,6 +1022,24 @@ export class TmuxController {
         }
     }
 
+    async duplicateWindow (paneId?: number): Promise<number | null> {
+        const cwd = await this.getPaneCurrentPath(paneId ?? this.activePaneId)
+        if (!cwd) {
+            return this.createWindow()
+        }
+
+        try {
+            const result = await this.gateway.sendCommand(
+                `new-window -c "${this.escapeTmuxString(cwd)}" -P -F "#{window_id}"`
+            )
+            const match = result.match(/@(\d+)/)
+            return match ? parseInt(match[1]) : null
+        } catch (e) {
+            this.logger.warn('Failed to duplicate window:', e)
+            return null
+        }
+    }
+
     async killWindow (windowId: number): Promise<void> {
         await this.gateway.sendCommand(`kill-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
     }
@@ -1097,6 +1122,31 @@ export class TmuxController {
      */
     getActiveWindowId (): number | null {
         return this.activeWindowId
+    }
+
+    getActivePaneId (): number | null {
+        return this.activePaneId
+    }
+
+    private async getPaneCurrentPath (paneId: number | null): Promise<string | null> {
+        if (paneId === null) {
+            return null
+        }
+
+        try {
+            const result = await this.gateway.sendCommand(
+                `display-message -p -t %${paneId} "#{pane_current_path}"`,
+                TMUX_COMMAND_TOLERATE_ERRORS
+            )
+            return result.trim() || null
+        } catch (e) {
+            this.logger.warn(`Failed to get current path for pane %${paneId}:`, e)
+            return null
+        }
+    }
+
+    private escapeTmuxString (value: string): string {
+        return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     }
 
     /**
