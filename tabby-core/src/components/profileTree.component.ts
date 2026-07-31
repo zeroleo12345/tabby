@@ -13,7 +13,7 @@ import { PlatformService } from '../api/platform'
 import { ProfileProvider } from '../api/index'
 import { PartialProfileGroup, ProfileGroup, PartialProfile, Profile } from '../index'
 import { BaseComponent } from './base.component'
-import { CdkDragStart, CdkDragMove, CdkDragEnd } from "@angular/cdk/drag-drop";
+import { CdkDragStart, CdkDragMove, CdkDragEnd } from '@angular/cdk/drag-drop'
 
 interface CollapsableProfileGroup extends ProfileGroup {
     collapsed: boolean
@@ -56,7 +56,6 @@ export class ProfileTreeComponent extends BaseComponent {
 
     async ngOnInit (): Promise<void> {
         await this.loadTreeItems()
-        this.subscribeUntilDestroyed(this.config.changed$, () => this.loadTreeItems())
         this.subscribeUntilDestroyed(this.config.changed$, () => this.loadTreeItems())
         this.app.tabsChanged$.subscribe(() => this.tabStateChanged())
         this.app.activeTabChange$.subscribe(() => this.tabStateChanged())
@@ -357,11 +356,11 @@ export class ProfileTreeComponent extends BaseComponent {
         }
     }
 
-    onDragStarted (event: CdkDragStart) {
+    onDragStarted (_event: CdkDragStart): void {
         this.panelStartWidth = this.panelInternalWidth
     }
 
-    onDragMoved (event: CdkDragMove) {
+    onDragMoved (event: CdkDragMove): void {
         // deltaX
         let width = this.panelStartWidth + event.distance.x
         // min_width < x < max_width
@@ -371,7 +370,7 @@ export class ProfileTreeComponent extends BaseComponent {
         event.source.setFreeDragPosition({ x: 0, y: 0 })
     }
 
-    onDragEnd (event: CdkDragEnd) {
+    onDragEnd (_event: CdkDragEnd): void {
         window.localStorage.profileTreeWidth = this.panelInternalWidth
     }
 
