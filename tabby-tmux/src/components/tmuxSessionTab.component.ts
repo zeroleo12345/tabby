@@ -94,6 +94,8 @@ export interface TmuxSessionProfile {
     `]
 })
 export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit, OnDestroy {
+    readonly isTmuxSessionTab = true
+
     @Input() profile: TmuxSessionProfile = {}
     @Input() existingController!: TmuxController
     @Input() windowId!: number

@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
-import TabbyCoreModule, { TabContextMenuItemProvider, ConfigProvider } from 'tabby-core'
+import TabbyCoreModule, { AppService, TabContextMenuItemProvider, ConfigProvider, HotkeysService } from 'tabby-core'
 import { SettingsTabProvider } from 'tabby-settings'
 import { TerminalDecorator } from 'tabby-terminal'
 import { TmuxContextMenuProvider } from './tabContextMenu'
@@ -37,4 +37,20 @@ import { TmuxSettingsTabComponent } from './components/settings.component'
         TmuxSettingsTabComponent,
     ],
 })
-export default class TmuxModule { }
+export default class TmuxModule {
+    constructor (
+        hotkeys: HotkeysService,
+        app: AppService,
+    ) {
+        hotkeys.hotkey$.subscribe(async hotkey => {
+            if (hotkey !== 'duplicate-tab') {
+                return
+            }
+
+            const activeTab = app.activeTab
+            if (activeTab instanceof TmuxSessionTabComponent) {
+                await activeTab.onCreateWindow()
+            }
+        })
+    }
+}
