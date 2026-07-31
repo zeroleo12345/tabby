@@ -94,6 +94,7 @@ export class TmuxGateway {
      * Send a single command and wait for response
      */
     async sendCommand (command: string, flags = 0): Promise<string> {
+        this.logger.info('Send tmux command:', command)
         if (this.detachSent || this.disconnected) {
             throw new Error('Gateway disconnected')
         }

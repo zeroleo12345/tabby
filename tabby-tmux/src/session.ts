@@ -324,6 +324,7 @@ export class TmuxController {
 
         this.gateway.windowRenamed$.subscribe(({ windowId, name }) => {
             const state = this.windowStates.get(windowId)
+            console.log(`windowRenamed evnet, windowId: ${windowId}, current name: ${state?.name}, new name: ${name}`)
             if (state) {
                 state.name = name
             }

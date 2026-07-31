@@ -53,8 +53,6 @@ export default class TmuxModule {
 
             if (hotkey === 'duplicate-tab') {
                 await activeTab.onDuplicateWindow()
-            } else if (hotkey === 'rename-tab' || hotkey === 'rename-ta') {
-                await activeTab.onRenameWindow()
             }
         })
     }

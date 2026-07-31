@@ -275,7 +275,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     }
 
     private async handleControllerEvent(event: { type: string; paneId?: number; windowId?: number; data?: any }): Promise<void> {
-        this.logger.info('SessionTab event:', event.type, event)
+        this.logger.info('Received Tmux event:', event.type, event)
 
         switch (event.type) {
             case 'initialized':
@@ -506,8 +506,8 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
 
     /**
      * SplitTabComponent normally derives its title from child pane titles.
-     * TmuxSessionTab represents a tmux window, so its tab title must stay bound
-     * to tmux's window name instead of being overwritten by "Pane %N".
+     * TmuxSessionTab represents a tmux window, so pane focus/title changes must
+     * refresh from tmux's window name without going through override setTitle().
      */
     protected override updateTitle(): void {
         this.updateTmuxTitle()
@@ -1257,28 +1257,40 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
     }
 
-    async onRenameWindow(): Promise<void> {
+    override setTitle(title: string): void {
+        const name = title.trim()
+        const oldName = this.controller?.getWindowState(this.windowId)?.name ?? ''
+        console.log(`setTitle, windowId: ${this.windowId}, old name: ${oldName}, new name: ${name}`)
+        if (!name || name === oldName) {
+            return
+        }
+
+        super.setTitle(name)
+        this.controller?.renameWindow(this.windowId, name).catch(e => {
+            this.logger.warn(`Failed to rename tmux window @${this.windowId}:`, e)
+        })
+    }
+
+    async onRenameTmuxWindow(): Promise<void> {
         if (!this.controller) {
             return
         }
 
+        const oldName = this.controller.getWindowState(this.windowId)?.name ?? ''
         const modal = this._ngbModal.open(TmuxRenameWindowModalComponent)
-        modal.componentInstance.value = this.controller.getWindowState(this.windowId)?.name ?? ''
+        modal.componentInstance.value = oldName
+        modal.result.then(result => {
+            this.setTitle(result)
+        }).catch(() => null)
+    }
 
-        const result = await modal.result.catch(() => null)
-        const name = typeof result === 'string' ? result.trim() : ''
-        if (name) {
-            await this.controller.renameWindow(this.windowId, name)
+    private updateTmuxTitle(): void {
+        const windowName = this.controller?.getWindowState(this.windowId)?.name
+        const title = windowName || `Tmux: ${this.sessionName}`
+        if (this.title === title) {
+            return
         }
-    }
-
-    setTmuxWindowTitle(name?: string): void {
-        this.updateTmuxTitle(name)
-    }
-
-    private updateTmuxTitle(name?: string): void {
-        const windowName = name ?? this.controller?.getWindowState(this.windowId)?.name
-        this.setTitle(windowName || `Tmux: ${this.sessionName}`)
+        super.setTitle(title)
     }
 
     override ngOnDestroy(): void {

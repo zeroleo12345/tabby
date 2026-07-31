@@ -23,6 +23,7 @@ export class RenameTabModalComponent {
     }
 
     save () {
+        this.value = this.input.nativeElement.value     // TODO: to be delete
         this.modalInstance.close(this.value)
     }
 

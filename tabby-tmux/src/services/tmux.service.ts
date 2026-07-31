@@ -280,7 +280,6 @@ export class TmuxService {
 
     private ensureWindowTab (context: SessionContext, windowId: number): void {
         if (context.sessionTabs.has(windowId)) {
-            this.updateWindowTabTitle(context, windowId)
             return
         }
 
@@ -368,7 +367,7 @@ export class TmuxService {
         const tab = context.sessionTabs.get(windowId)
         const windowState = context.controller.getWindowState(windowId)
         if (tab && windowState) {
-            tab.setTmuxWindowTitle(windowState.name)
+            // tab.setTitle(windowState.name)
         }
     }
 

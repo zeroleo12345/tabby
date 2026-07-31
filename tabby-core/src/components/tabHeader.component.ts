@@ -38,9 +38,6 @@ export class TabHeaderComponent extends BaseComponent {
         this.subscribeUntilDestroyed(this.hotkeys.hotkey$, (hotkey) => {
             if (this.app.activeTab === this.tab) {
                 if (hotkey === 'rename-tab') {
-                    if ((this.tab as any)?.isTmuxSessionTab) {
-                        return
-                    }
                     this.app.renameTab(this.tab)
                 }
             }
