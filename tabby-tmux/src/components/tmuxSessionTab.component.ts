@@ -1235,6 +1235,15 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
     }
 
+    async onReopenWindow(): Promise<void> {
+        if (this.controller) {
+            const newWindowId = await this.controller.reopenWindow()
+            if (newWindowId !== null) {
+                await this.switchToWindow(newWindowId)
+            }
+        }
+    }
+
     setTmuxWindowTitle(name?: string): void {
         this.updateTmuxTitle(name)
     }

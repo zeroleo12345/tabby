@@ -227,6 +227,11 @@ interface WindowState {
     panes: Set<number>
 }
 
+interface ClosedWindowState {
+    name: string
+    cwd: string | null
+}
+
 /**
  * TmuxController - Manages a tmux control mode session
  *
@@ -244,6 +249,7 @@ export class TmuxController {
     private attached = false
     private activeWindowId: number | null = null
     private activePaneId: number | null = null
+    private closedWindows: ClosedWindowState[] = []
 
     public gateway: TmuxGateway
     public events = new Subject<{ type: string; paneId?: number; windowId?: number; data?: any }>()
@@ -1040,7 +1046,29 @@ export class TmuxController {
         }
     }
 
+    async reopenWindow (): Promise<number | null> {
+        const closedWindow = this.closedWindows.pop()
+        if (!closedWindow) {
+            return null
+        }
+
+        try {
+            const name = closedWindow.name ? ` -n "${this.escapeTmuxString(closedWindow.name)}"` : ''
+            const cwd = closedWindow.cwd ? ` -c "${this.escapeTmuxString(closedWindow.cwd)}"` : ''
+            const result = await this.gateway.sendCommand(
+                `new-window${name}${cwd} -P -F "#{window_id}"`
+            )
+            const match = result.match(/@(\d+)/)
+            return match ? parseInt(match[1]) : null
+        } catch (e) {
+            this.closedWindows.push(closedWindow)
+            this.logger.warn('Failed to reopen window:', e)
+            return null
+        }
+    }
+
     async killWindow (windowId: number): Promise<void> {
+        await this.rememberClosedWindow(windowId)
         await this.gateway.sendCommand(`kill-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
     }
 
@@ -1128,6 +1156,27 @@ export class TmuxController {
         return this.activePaneId
     }
 
+    canReopenWindow (): boolean {
+        return this.closedWindows.length > 0
+    }
+
+    private async rememberClosedWindow (windowId: number): Promise<void> {
+        const state = this.windowStates.get(windowId)
+        if (!state) {
+            return
+        }
+
+        this.closedWindows.push({
+            name: state.name,
+            cwd: await this.getWindowCurrentPath(windowId),
+        })
+
+        const maxClosedWindows = 10
+        if (this.closedWindows.length > maxClosedWindows) {
+            this.closedWindows.shift()
+        }
+    }
+
     private async getPaneCurrentPath (paneId?: number | null): Promise<string | null> {
         try {
             const target = paneId !== undefined && paneId !== null ? ` -t %${paneId}` : ''
@@ -1138,6 +1187,19 @@ export class TmuxController {
             return result.trim() || null
         } catch (e) {
             this.logger.warn(`Failed to get current path${paneId !== undefined && paneId !== null ? ` for pane %${paneId}` : ''}:`, e)
+            return null
+        }
+    }
+
+    private async getWindowCurrentPath (windowId: number): Promise<string | null> {
+        try {
+            const result = await this.gateway.sendCommand(
+                `display-message -p -t @${windowId} "#{pane_current_path}"`,
+                TMUX_COMMAND_TOLERATE_ERRORS
+            )
+            return result.trim() || null
+        } catch (e) {
+            this.logger.warn(`Failed to get current path for window @${windowId}:`, e)
             return null
         }
     }

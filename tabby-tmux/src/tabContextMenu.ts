@@ -38,6 +38,13 @@ export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
                     },
                 },
                 {
+                    label: 'Reopen Tmux Window',
+                    enabled: tab.controller?.canReopenWindow() ?? false,
+                    click: async () => {
+                        await tab.onReopenWindow()
+                    },
+                },
+                {
                     label: 'Exit Tmux Mode',
                     click: async () => {
                         await this.tmuxService.disconnect()
