@@ -97,6 +97,8 @@ export interface TmuxSessionProfile {
 })
 export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit, OnDestroy {
     readonly isTmuxSessionTab = true
+    closedByTmux = false
+    private _closeRequestedByTab = false
 
     @Input() profile: TmuxSessionProfile = {}
     @Input() existingController!: TmuxController
@@ -1317,6 +1319,17 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     }
 
     override async canClose(): Promise<boolean> {
+        if (this.controller && !this.closedByTmux && !this._closeRequestedByTab) {
+            this._closeRequestedByTab = true
+            try {
+                await this.controller.killWindow(this.windowId)
+                this.closedByTmux = true
+            } catch (e) {
+                this._closeRequestedByTab = false
+                this.logger.warn(`Failed to close tmux window @${this.windowId}:`, e)
+                return false
+            }
+        }
         return true
     }
 

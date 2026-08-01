@@ -166,6 +166,7 @@ export { TmuxOutputInterceptor }
 export interface SessionContext {
     controller: TmuxController
     active?: boolean
+    disconnecting?: boolean
     /** The original terminal tab, hidden while tmux is active */
     terminalTab: BaseTerminalTabComponent<any>
     /** The concrete terminal session where the interceptor was installed */
@@ -349,7 +350,9 @@ export class TmuxService {
         context.subscriptions.push(sessionTab.destroyed$.subscribe(() => {
             if (context.sessionTabs.get(windowId) === sessionTab) {
                 context.sessionTabs.delete(windowId)
-                // context.controller.killWindow(windowId).catch(() => { /* window may already be gone */ })
+                if (!sessionTab.closedByTmux && !context.disconnecting && context.active) {
+                    context.controller.killWindow(windowId).catch(() => { /* window may already be gone */ })
+                }
             }
         }))
     }
@@ -360,6 +363,7 @@ export class TmuxService {
             return
         }
         context.sessionTabs.delete(windowId)
+        tab.closedByTmux = true
         tab.destroy()
     }
 
@@ -376,6 +380,7 @@ export class TmuxService {
         const rearm = options.rearm ?? false
 
         this.sessions.delete(context)
+        context.disconnecting = true
 
         context.subscriptions.forEach(s => s.unsubscribe())
 
