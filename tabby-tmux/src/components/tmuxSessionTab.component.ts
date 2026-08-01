@@ -1,7 +1,7 @@
 import { Component, Injector, Input, OnInit, OnDestroy, ChangeDetectorRef, ElementRef } from '@angular/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import { Subscription } from 'rxjs'
-import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
+import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService, PlatformService } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
 import { TerminalColorScheme } from 'tabby-terminal'
 import { TmuxController } from '../session'
@@ -107,6 +107,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     private logger: Logger
     private tmuxService: TmuxService
     private eventSubscription: Subscription | null = null
+    private platform: PlatformService
 
     // windowId → (paneId → paneTab)
     private windowPaneTabs = new Map<number, Map<number, TmuxPaneTabComponent>>()
@@ -152,6 +153,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         // at module top-level makes Angular's constructor metadata read it before
         // the service class is initialized.
         this.tmuxService = injector.get(require('../services/tmux.service').TmuxService)
+        this.platform = injector.get(PlatformService)
         this._tabsService = tabsService
         this._ngbModal = injector.get(NgbModal)
         this.logger = log.create('tmux-session')
@@ -1320,6 +1322,22 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
 
     override async canClose(): Promise<boolean> {
         if (this.controller && !this.closedByTmux && !this._closeRequestedByTab) {
+            const confirmed = (await this.platform.showMessageBox(
+                {
+                    type: 'warning',
+                    message: `Close tmux window?`,
+                    buttons: [
+                        'Close',
+                        'Do not close',
+                    ],
+                    defaultId: 0,
+                    cancelId: 1,
+                },
+            )).response === 0
+            if (!confirmed) {
+                return false
+            }
+
             this._closeRequestedByTab = true
             try {
                 await this.controller.killWindow(this.windowId)
