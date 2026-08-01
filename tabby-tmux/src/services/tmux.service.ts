@@ -71,16 +71,21 @@ class TmuxOutputInterceptor extends SessionMiddleware {
         const text = data.toString('utf-8')
         // console.log('text:', text)
 
-        const dcsMatch = /(?:\x1bP\d+p|P\d+p)%(?:begin|end|error|exit|output|extended-output|layout-change|window-add|window-close|unlinked-window-close|window-renamed|unlinked-window-renamed|session-changed|sessions-changed|session-window-changed|window-pane-changed|pane-close|unlinked-pane-close|pause|continue|no-output)\b/.exec(text)
+        // 处理终端 DCS 包起来的 control mode 行：\x1bP...p%begin
+        const dcsMatch = /(?:\x1bP\d+p|P\d+p)%begin /.exec(text)
         if (dcsMatch) {
+            console.log('text matched Control Mode Start')
             return Buffer.byteLength(text.substring(0, dcsMatch.index), 'utf-8')
         }
 
-        const plainMatch = /(^|[\r\n])%(?:begin|end|error|exit|output|extended-output|layout-change|window-add|window-close|unlinked-window-close|window-renamed|unlinked-window-renamed|session-changed|sessions-changed|session-window-changed|window-pane-changed|pane-close|unlinked-pane-close|pause|continue|no-output)\b/.exec(text)
-        if (plainMatch) {
-            const controlLineCharIndex = plainMatch.index + plainMatch[1].length
-            return Buffer.byteLength(text.substring(0, controlLineCharIndex), 'utf-8')
-        }
+        // 两种都保留，是为了兼容不同 tmux/终端输出形态，以及网络/PTY 分片
+        // 处理普通 control mode 行：%begin
+        // const plainMatch = /(^|[\r\n])%begin /.exec(text)
+        // if (plainMatch) {
+        //     console.log('text Matched Control Mode Start')
+        //     const controlLineCharIndex = plainMatch.index + plainMatch[1].length
+        //     return Buffer.byteLength(text.substring(0, controlLineCharIndex), 'utf-8')
+        // }
 
         return -1
     }
