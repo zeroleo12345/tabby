@@ -1322,20 +1322,22 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
 
     override async canClose(): Promise<boolean> {
         if (this.controller && !this.closedByTmux && !this._closeRequestedByTab) {
-            const confirmed = (await this.platform.showMessageBox(
-                {
-                    type: 'warning',
-                    message: `Close tmux window?`,
-                    buttons: [
-                        'Close',
-                        'Do not close',
-                    ],
-                    defaultId: 0,
-                    cancelId: 1,
-                },
-            )).response === 0
-            if (!confirmed) {
-                return false
+            if (this.shouldWarnOnClose()) {
+                const confirmed = (await this.platform.showMessageBox(
+                    {
+                        type: 'warning',
+                        message: 'Close tmux window?',
+                        buttons: [
+                            'Close',
+                            'Do not close',
+                        ],
+                        defaultId: 0,
+                        cancelId: 1,
+                    },
+                )).response === 0
+                if (!confirmed) {
+                    return false
+                }
             }
 
             this._closeRequestedByTab = true
@@ -1349,6 +1351,13 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
             }
         }
         return true
+    }
+
+    private shouldWarnOnClose(): boolean {
+        const ctx = this.tmuxService.findContextForTab(this)
+        return (this.profile as any)?.options?.warnOnClose ??
+            ctx?.terminalTab?.profile?.options?.warnOnClose ??
+            this.configService.store.ssh.warnOnClose
     }
 
     /**
