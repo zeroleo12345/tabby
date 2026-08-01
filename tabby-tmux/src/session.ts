@@ -55,7 +55,7 @@ export class TmuxPaneSession extends BaseSession {
      */
     private _pendingTitleSeq: Buffer | null = null
 
-    constructor(
+    constructor (
         logger: Logger,
         private controller: TmuxController,
         public paneId: number
@@ -65,7 +65,7 @@ export class TmuxPaneSession extends BaseSession {
         this.controller.registerPane(this.paneId, this)
     }
 
-    async start(): Promise<void> {
+    async start (): Promise<void> {
         this.open = true
         // Restore history — for initial attach this is instant (pre-loaded
         // during batch discovery); for runtime panes it falls back to
@@ -73,7 +73,7 @@ export class TmuxPaneSession extends BaseSession {
         await this.controller.restorePaneHistory(this.paneId)
     }
 
-    resize(_columns: number, _rows: number): void {
+    resize (_columns: number, _rows: number): void {
         // No-op by design. In tmux integration, tmux is authoritative over the
         // cell grid: each pane's character size comes from the %layout-change
         // string and is applied via TmuxPaneTabComponent.setTmuxGrid().
@@ -87,7 +87,7 @@ export class TmuxPaneSession extends BaseSession {
         // in TmuxSessionTabComponent.refreshClientSize().
     }
 
-    write(data: Buffer): void {
+    write (data: Buffer): void {
         this.controller.writeToPane(this.paneId, data)
     }
 
@@ -96,26 +96,26 @@ export class TmuxPaneSession extends BaseSession {
     // outputToSession$ → write()) so that SessionMiddleware plugins
     // such as trzsz can intercept terminal input.
 
-    kill(_signal?: string): void {
+    kill (_signal?: string): void {
         this.destroy()
     }
 
-    async destroy(): Promise<void> {
+    async destroy (): Promise<void> {
         this.pendingAltRestore = null
         this._pendingTitleSeq = null
         await super.destroy()
         this.controller.unregisterPane(this.paneId)
     }
 
-    async gracefullyKillProcess(): Promise<void> {
-        this.destroy()
+    async gracefullyKillProcess (): Promise<void> {
+        await this.destroy()
     }
 
-    supportsWorkingDirectory(): boolean {
+    supportsWorkingDirectory (): boolean {
         return false
     }
 
-    async getWorkingDirectory(): Promise<string | null> {
+    async getWorkingDirectory (): Promise<string | null> {
         return null
     }
 
@@ -128,7 +128,7 @@ export class TmuxPaneSession extends BaseSession {
      * hooks that set the terminal title via `print -Pn "\ek%s\e\\"` would leak
      * the title text as visible output (e.g. `echo111` instead of `111`).
      */
-    feedOutput(data: Buffer): void {
+    feedOutput (data: Buffer): void {
         data = this.filterScreenTitleSequences(data)
         if (data.length > 0) {
             this.emitOutput(data)
@@ -148,7 +148,7 @@ export class TmuxPaneSession extends BaseSession {
      * Handles sequences that span multiple feedOutput calls by buffering
      * the incomplete portion until the closing ST (ESC \) arrives.
      */
-    private filterScreenTitleSequences(data: Buffer): Buffer {
+    private filterScreenTitleSequences (data: Buffer): Buffer {
         // Prepend leftover from previous call
         if (this._pendingTitleSeq) {
             data = Buffer.concat([this._pendingTitleSeq, data])
@@ -227,6 +227,11 @@ interface WindowState {
     panes: Set<number>
 }
 
+interface ClosedWindowState {
+    name: string
+    cwd: string | null
+}
+
 /**
  * TmuxController - Manages a tmux control mode session
  *
@@ -243,6 +248,8 @@ export class TmuxController {
     private sessionId = -1
     private attached = false
     private activeWindowId: number | null = null
+    private activePaneId: number | null = null
+    private closedWindows: ClosedWindowState[] = []
 
     public gateway: TmuxGateway
     public events = new Subject<{ type: string; paneId?: number; windowId?: number; data?: any }>()
@@ -251,7 +258,7 @@ export class TmuxController {
         return createConditionalLogger(this.logger, this.configService)
     }
 
-    constructor(
+    constructor (
         private logger: Logger,
         _injector: Injector,  // eslint-disable-line @typescript-eslint/no-unused-vars
         writer: (data: string) => void,
@@ -262,7 +269,7 @@ export class TmuxController {
         this.setupGatewaySubscriptions()
     }
 
-    private setupGatewaySubscriptions(): void {
+    private setupGatewaySubscriptions (): void {
         // Handle pane output
         this.gateway.output$.subscribe(({ paneId, data }) => {
             this.log.info(`Session received output for pane %${paneId}: ${data.length} bytes`)
@@ -317,6 +324,7 @@ export class TmuxController {
 
         this.gateway.windowRenamed$.subscribe(({ windowId, name }) => {
             const state = this.windowStates.get(windowId)
+            console.log(`windowRenamed evnet, windowId: ${windowId}, current name: ${state?.name}, new name: ${name}`)
             if (state) {
                 state.name = name
             }
@@ -386,6 +394,7 @@ export class TmuxController {
         // the next pane and sends %window-pane-changed).
         this.gateway.paneChanged$.subscribe(({ windowId, paneId }) => {
             this.log.info(`Active pane changed to %${paneId} in window @${windowId}`)
+            this.activePaneId = paneId
             this.events.next({ type: 'active-pane-changed', paneId, windowId })
         })
 
@@ -405,7 +414,7 @@ export class TmuxController {
     /**
      * Process a line from the underlying session
      */
-    handleLine(line: string): void {
+    handleLine (line: string): void {
         this.gateway.executeLine(line)
     }
 
@@ -413,7 +422,7 @@ export class TmuxController {
      * Feed raw PTY data to the gateway for byte-level DCS buffering.
      * Preferred over handleLine for proper handling of TCP fragments.
      */
-    handleData(data: Buffer): void {
+    handleData (data: Buffer): void {
         this.gateway.executeData(data)
     }
 
@@ -430,7 +439,7 @@ export class TmuxController {
      * its history is already captured — no async restore or buffering
      * is needed at the session level.
      */
-    private async discoverWindowsAndPanes(): Promise<void> {
+    private async discoverWindowsAndPanes (): Promise<void> {
         this.log.info('Batch discovering windows and panes...')
         try {
             // Step 1: Discover all windows with names, layout and active flag
@@ -470,7 +479,7 @@ export class TmuxController {
 
             // Step 2: Discover all panes and map to windows
             const paneResult = await this.gateway.sendCommand(
-                'list-panes -s -F "#{pane_id} #{window_id}"',
+                'list-panes -s -F "#{pane_id} #{window_id} #{pane_active}"',
                 TMUX_COMMAND_TOLERATE_ERRORS
             )
             const paneLines = paneResult.split(/[\r\n]+/).map(l => l.trim()).filter(l => l)
@@ -478,10 +487,11 @@ export class TmuxController {
 
             const newPaneIds: Array<{ paneId: number; windowId: number }> = []
             for (const line of paneLines) {
-                const match = line.match(/^%?(\d+)\s+@?(\d+)$/)
+                const match = line.match(/^%?(\d+)\s+@?(\d+)(?:\s+([01]))?$/)
                 if (match) {
                     const paneId = parseInt(match[1])
                     const windowId = parseInt(match[2])
+                    const active = match[3] === '1'
 
                     let windowState = this.windowStates.get(windowId)
                     if (!windowState) {
@@ -498,6 +508,10 @@ export class TmuxController {
                     if (!this.knownPanes.has(paneId)) {
                         this.knownPanes.add(paneId)
                         newPaneIds.push({ paneId, windowId })
+                    }
+
+                    if (active && windowId === this.activeWindowId) {
+                        this.activePaneId = paneId
                     }
                 }
             }
@@ -538,7 +552,7 @@ export class TmuxController {
      * to trigger a full re-scan. For runtime pane creation (split-window),
      * discoverPanesFromLayout() handles it via %layout-change instead.
      */
-    async refreshPanes(): Promise<void> {
+    async refreshPanes (): Promise<void> {
         return this.discoverWindowsAndPanes()
     }
 
@@ -550,7 +564,7 @@ export class TmuxController {
      * history/state for any new ones, emit pane-add events, then emit
      * layout-change so syncLayout() runs after pane tabs exist.
      */
-    private async discoverPanesFromLayout(
+    private async discoverPanesFromLayout (
         windowId: number,
         layout: string,
         visibleLayout?: string,
@@ -633,7 +647,7 @@ export class TmuxController {
      * Capture history + state for an array of panes.
      * Shared by discoverWindowsAndPanes() and discoverPanesFromLayout().
      */
-    private async capturePaneSnapshots(paneIds: Array<{ paneId: number; windowId: number }>): Promise<void> {
+    private async capturePaneSnapshots (paneIds: Array<{ paneId: number; windowId: number }>): Promise<void> {
         const stateFormat = [
             'pane_id=#{pane_id}',
             'alternate_on=#{alternate_on}',
@@ -681,10 +695,8 @@ export class TmuxController {
     }
 
 
-
     // --- Pane Management ---
-
-    registerPane(paneId: number, session: TmuxPaneSession): void {
+    registerPane (paneId: number, session: TmuxPaneSession): void {
         this.paneSessions.set(paneId, session)
         this.knownPanes.add(paneId)
 
@@ -707,21 +719,21 @@ export class TmuxController {
         }
     }
 
-    unregisterPane(paneId: number): void {
+    unregisterPane (paneId: number): void {
         this.paneSessions.delete(paneId)
         this.pendingPaneOutput.delete(paneId)
         this.pendingSnapshots.delete(paneId)
     }
 
-    getPaneSession(paneId: number): TmuxPaneSession | undefined {
+    getPaneSession (paneId: number): TmuxPaneSession | undefined {
         return this.paneSessions.get(paneId)
     }
 
-    hasPaneSession(paneId: number): boolean {
+    hasPaneSession (paneId: number): boolean {
         return this.paneSessions.has(paneId)
     }
 
-    resizePane(_paneId: number, columns: number, rows: number): void {
+    resizePane (_paneId: number, columns: number, rows: number): void {
         // Use refresh-client -C to set client size
         // This affects all panes uniformly in non-variable-size mode
         // Note: paneId is ignored as tmux control mode uses uniform size
@@ -731,7 +743,7 @@ export class TmuxController {
         ).catch(e => this.logger.warn('Resize failed:', e))
     }
 
-    writeToPane(paneId: number, data: Buffer): void {
+    writeToPane (paneId: number, data: Buffer): void {
         this.log.info(`Writing ${data.length} bytes to pane %${paneId}: <${data.toString('hex')}>`)
         this.gateway.sendKeys(data, paneId)
     }
@@ -750,7 +762,7 @@ export class TmuxController {
      * 2. Alternate screen history (via CSI ?1047h / escape sequences)
      * 3. Terminal state (cursor, scroll region, modes)
      */
-    async restorePaneHistory(paneId: number): Promise<void> {
+    async restorePaneHistory (paneId: number): Promise<void> {
         const snapshot = this.pendingSnapshots.get(paneId)
         if (!snapshot) {
             this.logger.warn(`No pre-loaded snapshot for pane %${paneId}, skipping`)
@@ -825,7 +837,7 @@ export class TmuxController {
      * Parse pane state from `list-panes -F` response.
      * Mirrors iTerm2 TmuxStateParser.
      */
-    private parsePaneState(response: string, expectedPaneId: number): PaneState {
+    private parsePaneState (response: string, expectedPaneId: number): PaneState {
         const state: PaneState = {
             paneId: expectedPaneId,
             cursorX: 0, cursorY: 0,
@@ -897,7 +909,7 @@ export class TmuxController {
      * Apply parsed pane state to the terminal via ANSI escape sequences.
      * Mirrors iTerm2 VT100ScreenMutableState.setTmuxState:.
      */
-    private applyPaneState(session: TmuxPaneSession, state: PaneState): void {
+    private applyPaneState (session: TmuxPaneSession, state: PaneState): void {
         // Build a sequence of escape codes to restore terminal state.
         const seq = this.buildModeSequences(state)
         session.feedOutput(Buffer.from(seq, 'utf-8'))
@@ -907,7 +919,7 @@ export class TmuxController {
      * Build ANSI escape sequences for terminal mode state (without alternate
      * screen entry).  Used by both applyPaneState and pendingAltRestore.
      */
-    private buildModeSequences(state: PaneState): string {
+    private buildModeSequences (state: PaneState): string {
         const csi = (s: string) => `\x1b[${s}`
         const esc = (s: string) => `\x1b${s}`
         let seq = ''
@@ -961,7 +973,7 @@ export class TmuxController {
      * Re-apply alternate screen content after xterm.resize() clears it.
      * Called by TmuxPaneTabComponent.applyTmuxGrid() after resize.
      */
-    reapplyAltContent(session: TmuxPaneSession): void {
+    reapplyAltContent (session: TmuxPaneSession): void {
         const alt = session.pendingAltRestore
         if (!alt) return
 
@@ -990,7 +1002,7 @@ export class TmuxController {
         ))
     }
 
-    async killPane(paneId: number): Promise<void> {
+    async killPane (paneId: number): Promise<void> {
         await this.gateway.sendCommand(`kill-pane -t %${paneId}`, TMUX_COMMAND_TOLERATE_ERRORS)
     }
 
@@ -998,7 +1010,7 @@ export class TmuxController {
      * Toggle zoom on a pane (tmux prefix+z equivalent).
      * When zoomed, the pane fills the entire window; other panes are hidden.
      */
-    async zoomPane(paneId: number): Promise<void> {
+    async zoomPane (paneId: number): Promise<void> {
         await this.gateway.sendCommand(
             `resize-pane -Z -t %${paneId}`,
             TMUX_COMMAND_TOLERATE_ERRORS
@@ -1006,8 +1018,7 @@ export class TmuxController {
     }
 
     // --- Window Operations ---
-
-    async createWindow(): Promise<number | null> {
+    async createWindow (): Promise<number | null> {
         try {
             const result = await this.gateway.sendCommand('new-window -P -F "#{window_id}"')
             const match = result.match(/@(\d+)/)
@@ -1018,24 +1029,67 @@ export class TmuxController {
         }
     }
 
-    async killWindow(windowId: number): Promise<void> {
+    async duplicateWindow (paneId?: number): Promise<number | null> {
+        const cwd = await this.getPaneCurrentPath(paneId ?? this.activePaneId)
+        if (!cwd) {
+            return this.createWindow()
+        }
+
+        try {
+            const result = await this.gateway.sendCommand(
+                `new-window -c "${this.escapeTmuxString(cwd)}" -P -F "#{window_id}"`
+            )
+            const match = result.match(/@(\d+)/)
+            return match ? parseInt(match[1]) : null
+        } catch (e) {
+            this.logger.warn('Failed to duplicate window:', e)
+            return null
+        }
+    }
+
+    async reopenWindow (): Promise<number | null> {
+        const closedWindow = this.closedWindows.pop()
+        if (!closedWindow) {
+            return null
+        }
+
+        try {
+            const name = closedWindow.name ? ` -n "${this.escapeTmuxString(closedWindow.name)}"` : ''
+            const cwd = closedWindow.cwd ? ` -c "${this.escapeTmuxString(closedWindow.cwd)}"` : ''
+            const result = await this.gateway.sendCommand(
+                `new-window${name}${cwd} -P -F "#{window_id}"`
+            )
+            const match = result.match(/@(\d+)/)
+            return match ? parseInt(match[1]) : null
+        } catch (e) {
+            this.closedWindows.push(closedWindow)
+            this.logger.warn('Failed to reopen window:', e)
+            return null
+        }
+    }
+
+    async killWindow (windowId: number): Promise<void> {
+        await this.rememberClosedWindow(windowId)
         await this.gateway.sendCommand(`kill-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
     }
 
-    async renameWindow(windowId: number, name: string): Promise<void> {
+    async selectWindow (windowId: number): Promise<void> {
+        await this.gateway.sendCommand(`select-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
+    }
+
+    async renameWindow (windowId: number, name: string): Promise<void> {
         await this.gateway.sendCommand(
-            `rename-window -t @${windowId} "${name.replace(/"/g, '\\"')}"`,
+            `rename-window -t @${windowId} "${this.escapeTmuxString(name)}"`,
             TMUX_COMMAND_TOLERATE_ERRORS
         )
     }
 
     // --- Session Operations ---
-
-    async detach(): Promise<void> {
+    async detach (): Promise<void> {
         this.gateway.detach()
     }
 
-    async listSessions(): Promise<Array<{ id: number; name: string }>> {
+    async listSessions (): Promise<Array<{ id: number; name: string }>> {
         try {
             const result = await this.gateway.sendCommand('list-sessions -F "#{session_id} #{session_name}"')
             const sessions: Array<{ id: number; name: string }> = []
@@ -1056,8 +1110,7 @@ export class TmuxController {
     }
 
     // --- Lifecycle ---
-
-    async destroy(): Promise<void> {
+    async destroy (): Promise<void> {
         // Close all pane sessions
         for (const [_paneId, session] of this.paneSessions) {
             await session.destroy()
@@ -1067,28 +1120,27 @@ export class TmuxController {
     }
 
     // --- Getters ---
-
-    get isAttached(): boolean {
+    get isAttached (): boolean {
         return this.attached
     }
 
-    getSessionName(): string {
+    getSessionName (): string {
         return this.sessionName
     }
 
-    getSessionId(): number {
+    getSessionId (): number {
         return this.sessionId
     }
 
-    getWindowState(windowId: number): WindowState | undefined {
+    getWindowState (windowId: number): WindowState | undefined {
         return this.windowStates.get(windowId)
     }
 
-    getAllWindowStates(): WindowState[] {
+    getAllWindowStates (): WindowState[] {
         return Array.from(this.windowStates.values())
     }
 
-    getFirstWindowId(): number | undefined {
+    getFirstWindowId (): number | undefined {
         const first = this.windowStates.keys().next()
         return first.done ? undefined : first.value
     }
@@ -1097,15 +1149,71 @@ export class TmuxController {
      * Get the tmux-side active window ID, as reported by list-windows
      * #{window_active} or %session-window-changed. Falls back to null.
      */
-    getActiveWindowId(): number | null {
+    getActiveWindowId (): number | null {
         return this.activeWindowId
+    }
+
+    getActivePaneId (): number | null {
+        return this.activePaneId
+    }
+
+    canReopenWindow (): boolean {
+        return this.closedWindows.length > 0
+    }
+
+    private async rememberClosedWindow (windowId: number): Promise<void> {
+        const state = this.windowStates.get(windowId)
+        if (!state) {
+            return
+        }
+
+        this.closedWindows.push({
+            name: state.name,
+            cwd: await this.getWindowCurrentPath(windowId),
+        })
+
+        const maxClosedWindows = 10
+        if (this.closedWindows.length > maxClosedWindows) {
+            this.closedWindows.shift()
+        }
+    }
+
+    private async getPaneCurrentPath (paneId?: number | null): Promise<string | null> {
+        try {
+            const target = paneId !== undefined && paneId !== null ? ` -t %${paneId}` : ''
+            const result = await this.gateway.sendCommand(
+                `display-message -p${target} "#{pane_current_path}"`,
+                TMUX_COMMAND_TOLERATE_ERRORS
+            )
+            return result.trim() || null
+        } catch (e) {
+            this.logger.warn(`Failed to get current path${paneId !== undefined && paneId !== null ? ` for pane %${paneId}` : ''}:`, e)
+            return null
+        }
+    }
+
+    private async getWindowCurrentPath (windowId: number): Promise<string | null> {
+        try {
+            const result = await this.gateway.sendCommand(
+                `display-message -p -t @${windowId} "#{pane_current_path}"`,
+                TMUX_COMMAND_TOLERATE_ERRORS
+            )
+            return result.trim() || null
+        } catch (e) {
+            this.logger.warn(`Failed to get current path for window @${windowId}:`, e)
+            return null
+        }
+    }
+
+    private escapeTmuxString (value: string): string {
+        return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     }
 
     /**
      * Get all known pane IDs across all windows.
      * Used by TmuxPaneTabComponent for "Focus all tmux panes" (sync input).
      */
-    getAllPaneIds(): number[] {
+    getAllPaneIds (): number[] {
         return Array.from(this.knownPanes)
     }
 }

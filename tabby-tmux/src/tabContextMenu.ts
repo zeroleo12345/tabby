@@ -15,16 +15,41 @@ import { TmuxPaneTabComponent } from './components/tmuxPaneTab.component'
 export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
     weight = 5
 
-    constructor(
+    constructor (
         private tmuxService: TmuxService,
     ) {
         super()
     }
 
-    async getItems(tab: BaseTabComponent, _tabHeader?: boolean): Promise<MenuItemOptions[]> {
+    async getItems (tab: BaseTabComponent, _tabHeader?: boolean): Promise<MenuItemOptions[]> {
         // On a TmuxSessionTab: show exit option
         if (tab instanceof TmuxSessionTabComponent) {
             return [
+                {
+                    label: 'New Tmux Window',
+                    click: async () => {
+                        await tab.controller?.createWindow()
+                    },
+                },
+                {
+                    label: 'Duplicate Tmux Window',
+                    click: async () => {
+                        await tab.onDuplicateWindow()
+                    },
+                },
+                {
+                    label: 'Reopen Tmux Window',
+                    enabled: tab.controller?.canReopenWindow() ?? false,
+                    click: async () => {
+                        await tab.onReopenWindow()
+                    },
+                },
+                {
+                    label: 'Rename Tmux Window',
+                    click: async () => {
+                        await tab.onRenameTmuxWindow()
+                    },
+                },
                 {
                     label: 'Exit Tmux Mode',
                     click: async () => {
@@ -75,29 +100,26 @@ export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
         return []
     }
 
-    private async splitPane(paneTab: TmuxPaneTabComponent, direction: 'right' | 'down' | 'left' | 'up'): Promise<void> {
+    private async splitPane (paneTab: TmuxPaneTabComponent, direction: 'right' | 'down' | 'left' | 'up'): Promise<void> {
         const controller = paneTab.controller
         if (!controller) return
 
         const paneId = paneTab.paneId
         const flagMap: Record<string, string> = {
-            'right': '-h',
-            'down': '-v',
-            'left': '-h -b',
-            'up': '-v -b',
+            right: '-h',
+            down: '-v',
+            left: '-h -b',
+            up: '-v -b',
         }
         const flag = flagMap[direction]
-        await controller.gateway.sendCommand(
-            `split-window ${flag} -t %${paneId}`
-        )
+        await controller.gateway.sendCommand(`split-window ${flag} -t %${paneId}`)
         // Discover the new pane and trigger layout update
         await controller.refreshPanes()
     }
 
-    private async closePane(paneTab: TmuxPaneTabComponent): Promise<void> {
+    private async closePane (paneTab: TmuxPaneTabComponent): Promise<void> {
         const controller = paneTab.controller
         if (!controller) return
         await controller.killPane(paneTab.paneId)
     }
 }
-

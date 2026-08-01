@@ -9,6 +9,8 @@ yarn run watch  # yarn run build
 
 yarn run start  # RUST_LOG=trace
 
+yarn run lint   # code style check
+
 
 
 # MacOS Release from local build
@@ -42,3 +44,7 @@ xattr -r -d com.apple.quarantine Tabby.app
 - vault password: ~/Library/Application\ Support/tabby/passphrase.json
 
 - config path: ~/Library/Application\ Support/tabby/config.yaml
+
+
+# plugin folder
+cd ~/Library/Application\ Support/tabby/plugins/node_modules

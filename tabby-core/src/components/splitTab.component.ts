@@ -817,7 +817,7 @@ export class SplitTabComponent extends BaseTabComponent implements AfterViewInit
         this.root.equalize()
     }
 
-    private updateTitle (): void {
+    protected updateTitle (): void {
         if (this.disableDynamicTitle) {
             return
         }

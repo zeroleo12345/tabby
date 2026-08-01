@@ -72,7 +72,7 @@ export class TmuxGateway {
     public exit$ = new Subject<string>()
     public initialized$ = new Subject<void>()
 
-    constructor(
+    constructor (
         private logger: Logger,
         private writer: (data: string) => void,
         private configService?: ConfigService
@@ -93,7 +93,8 @@ export class TmuxGateway {
     /**
      * Send a single command and wait for response
      */
-    async sendCommand(command: string, flags = 0): Promise<string> {
+    async sendCommand (command: string, flags = 0): Promise<string> {
+        this.logger.info('Send tmux command:', command)
         if (this.detachSent || this.disconnected) {
             throw new Error('Gateway disconnected')
         }
@@ -131,7 +132,7 @@ export class TmuxGateway {
     /**
      * Send a list of commands atomically (separated by ;)
      */
-    async sendCommandList(commands: Array<{ command: string; flags?: number }>): Promise<string[]> {
+    async sendCommandList (commands: Array<{ command: string; flags?: number }>): Promise<string[]> {
         if (this.detachSent || this.disconnected || commands.length === 0) {
             return []
         }
@@ -167,7 +168,7 @@ export class TmuxGateway {
      * parseBegin() tracks these via directWritesPending so they are consumed
      * without trying to dequeue a queued command.
      */
-    sendKeys(data: Buffer, paneId: number): void {
+    sendKeys (data: Buffer, paneId: number): void {
         if (this.disconnected) return
 
         const hex = data.toString('hex')
@@ -186,7 +187,7 @@ export class TmuxGateway {
     /**
      * Request detach
      */
-    detach(): void {
+    detach (): void {
         if (!this.detachSent) {
             this.write('detach\r')
             this.detachSent = true
@@ -197,7 +198,7 @@ export class TmuxGateway {
      * Feed raw PTY data.  Buffers incomplete lines across calls so that TCP
      * fragment boundaries never split a protocol line.
      */
-    executeData(data: Buffer): void {
+    executeData (data: Buffer): void {
         this.lineBuffer += data.toString('utf-8')
 
         let newlineIdx: number
@@ -214,7 +215,7 @@ export class TmuxGateway {
     /**
      * Process a single complete line from tmux control mode
      */
-    executeLine(line: string): void {
+    executeLine (line: string): void {
         // Strip DCS artifacts
         line = line.replace(/^\x1bP\d+p/, '').replace(/^P\d+p/, '').replace(/\x1b\\$/, '')
         if (!line) return
@@ -319,8 +320,7 @@ export class TmuxGateway {
     }
 
     // --- Protocol Parsing ---
-
-    private parseBegin(line: string): void {
+    private parseBegin (line: string): void {
         // %begin timestamp commandId flags
         // Format: %begin 1767853190 875 1
         // tmux Control Mode docs: flags is always 1 for client-originated.
@@ -352,7 +352,7 @@ export class TmuxGateway {
         this.currentCommand = this.commandQueue.shift()!
     }
 
-    private finishCurrentCommand(isError: boolean): void {
+    private finishCurrentCommand (isError: boolean): void {
         this.inResponseBlock = false
         const response = this.currentResponse.join('\n')
 
@@ -373,7 +373,7 @@ export class TmuxGateway {
         }
     }
 
-    private stripLastNewline(): void {
+    private stripLastNewline (): void {
         if (this.currentResponse.length > 0) {
             const last = this.currentResponse[this.currentResponse.length - 1]
             if (last === '') {
@@ -382,7 +382,7 @@ export class TmuxGateway {
         }
     }
 
-    private parseOutput(line: string): void {
+    private parseOutput (line: string): void {
         // %output %<pane> <data>
         const match = line.match(/^%output %(\d+) (.*)$/)
         if (!match) {
@@ -396,7 +396,7 @@ export class TmuxGateway {
         this.output$.next({ paneId, data })
     }
 
-    private parseExtendedOutput(line: string): void {
+    private parseExtendedOutput (line: string): void {
         // %extended-output %<pane> <latency> : <data>
         const match = line.match(/^%extended-output %(\d+) (\d+) : (.*)$/)
         if (!match) return
@@ -407,7 +407,7 @@ export class TmuxGateway {
         this.output$.next({ paneId, data, latency })
     }
 
-    private parseLayoutChange(line: string): void {
+    private parseLayoutChange (line: string): void {
         // %layout-change @<window> <layout> [visible_layout flags]
         const match = line.match(/^%layout-change @(\d+) (.+)$/)
         if (!match) return
@@ -421,7 +421,7 @@ export class TmuxGateway {
         this.layoutChange$.next({ windowId, layout, visibleLayout, zoomed })
     }
 
-    private parseWindowAdd(line: string): void {
+    private parseWindowAdd (line: string): void {
         // %window-add @<id>
         const match = line.match(/^%window-add @(\d+)$/)
         if (match) {
@@ -429,7 +429,7 @@ export class TmuxGateway {
         }
     }
 
-    private parseWindowClose(line: string): void {
+    private parseWindowClose (line: string): void {
         // %window-close @<id> or %unlinked-window-close @<id>
         const match = line.match(/@(\d+)$/)
         if (match) {
@@ -437,7 +437,7 @@ export class TmuxGateway {
         }
     }
 
-    private parseWindowRenamed(line: string): void {
+    private parseWindowRenamed (line: string): void {
         // %window-renamed @<id> <name>
         const match = line.match(/^%(?:unlinked-)?window-renamed @(\d+) (.+)$/)
         if (match) {
@@ -448,7 +448,7 @@ export class TmuxGateway {
         }
     }
 
-    private parseSessionChanged(line: string): void {
+    private parseSessionChanged (line: string): void {
         // %session-changed $<id> <name>
         const match = line.match(/^%session-changed \$(\d+) (.+)$/)
         if (match) {
@@ -461,7 +461,7 @@ export class TmuxGateway {
         }
     }
 
-    private parseSessionWindowChanged(line: string): void {
+    private parseSessionWindowChanged (line: string): void {
         // %session-window-changed $session @window
         const match = line.match(/^%session-window-changed \$\d+ @(\d+)/)
         if (match) {
@@ -471,7 +471,7 @@ export class TmuxGateway {
         }
     }
 
-    private parsePaneChanged(line: string): void {
+    private parsePaneChanged (line: string): void {
         // %window-pane-changed @<window> %<pane>
         const match = line.match(/^%window-pane-changed @(\d+) %(\d+)$/)
         if (match) {
@@ -482,7 +482,7 @@ export class TmuxGateway {
         }
     }
 
-    private parsePaneClose(line: string): void {
+    private parsePaneClose (line: string): void {
         // %pane-close @<window> %<pane>
         const match = line.match(/^%(?:unlinked-)?pane-close @(\d+) %(\d+)$/)
         if (match) {
@@ -493,7 +493,7 @@ export class TmuxGateway {
         }
     }
 
-    private parseExit(line: string): void {
+    private parseExit (line: string): void {
         // %exit or %exit <reason>
         const reason = line.replace(/^%exit\s*/, '')
         this.exit$.next(reason)
@@ -502,14 +502,14 @@ export class TmuxGateway {
 
     // --- Utility Methods ---
 
-    private write(data: string): void {
+    private write (data: string): void {
         this.writer(data)
     }
 
     /**
      * Decode tmux octal-escaped output to Buffer
      */
-    private decodeOutput(str: string): Buffer {
+    private decodeOutput (str: string): Buffer {
         const bytes: number[] = []
         for (let i = 0; i < str.length; i++) {
             if (str[i] === '\\' && i + 3 < str.length) {
@@ -529,7 +529,7 @@ export class TmuxGateway {
         return Buffer.from(bytes)
     }
 
-    private unescapeTmuxWindowName(name: string): string {
+    private unescapeTmuxWindowName (name: string): string {
         // Tmux may escape window names
         return name.replace(/\\(.)/g, '$1')
     }
@@ -537,7 +537,7 @@ export class TmuxGateway {
     /**
      * Check if server version is at least the given version
      */
-    versionAtLeast(version: number): boolean {
+    versionAtLeast (version: number): boolean {
         return this.minimumServerVersion !== null && this.minimumServerVersion >= version
     }
 }

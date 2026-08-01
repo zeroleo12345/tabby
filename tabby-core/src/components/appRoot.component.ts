@@ -121,6 +121,10 @@ export class AppRootComponent {
                     this.app.moveSelectedTabRight()
                 }
                 if (hotkey === 'duplicate-tab') {
+                    if ((this.app.activeTab as any)?.isTmuxSessionTab) {
+                        // hotkey handle by tmux session
+                        return
+                    }
                     this.app.duplicateTab(this.app.activeTab)
                 }
                 if (hotkey === 'restart-tab') {
