@@ -24,6 +24,11 @@ export class HotkeysService {
      */
     get hotkey$ (): Observable<string> {
         return this._hotkey.pipe(filter(() => {
+            // length > 0：有任意 input 聚焦
+            if (document.querySelectorAll('search-panel input:focus').length > 0) {
+                return true
+            }
+            // length === 0：没有 input 聚焦
             return document.querySelectorAll('input:focus').length === 0
         }))
     }
