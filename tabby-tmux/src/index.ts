@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common'
 import { FormsModule } from '@angular/forms'
 import TabbyCoreModule, { AppService, TabContextMenuItemProvider, ConfigProvider, HotkeysService } from 'tabby-core'
 import { SettingsTabProvider } from 'tabby-settings'
-import { TerminalDecorator } from 'tabby-terminal'
+import TabbyTerminalModule, { TerminalDecorator } from 'tabby-terminal'
 import { TmuxContextMenuProvider } from './tabContextMenu'
 import { TmuxConfigProvider } from './config'
 import { TmuxSettingsTabProvider } from './settings'
@@ -19,6 +19,7 @@ import { TmuxRenameWindowModalComponent } from './components/tmuxRenameWindowMod
         CommonModule,
         FormsModule,
         TabbyCoreModule,
+        TabbyTerminalModule,
     ],
     providers: [
         { provide: TabContextMenuItemProvider, useClass: TmuxContextMenuProvider, multi: true },
