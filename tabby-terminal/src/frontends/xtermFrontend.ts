@@ -139,6 +139,7 @@ export class XTermFrontend extends Frontend {
             if (this.getSelection()) {
                 if (this.copyOnSelect && !this.preventNextOnSelectionChangeEvent) {
                     this.copySelection()
+                    this.notifications.notice(this.translate.instant('Copied'))
                 }
                 this.preventNextOnSelectionChangeEvent = false
             }
