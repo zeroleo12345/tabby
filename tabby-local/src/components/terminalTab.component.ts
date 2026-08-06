@@ -106,6 +106,9 @@ export class TerminalTabComponent extends BaseTerminalTabComponent<LocalProfile>
         if (!children?.length) {
             return true
         }
+        if (this.isExiting) {
+            return true
+        }
         return (await this.platform.showMessageBox(
             {
                 type: 'warning',

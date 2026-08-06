@@ -5,6 +5,7 @@ import { Observable, Subject, AsyncSubject, takeUntil, debounceTime } from 'rxjs
 import { BaseTabComponent } from '../components/baseTab.component'
 import { SplitTabComponent } from '../components/splitTab.component'
 import { RenameTabModalComponent } from '../components/renameTabModal.component'
+import { ConfirmModalComponent } from '../components/confirmModal.component'
 import { SelectorOption } from '../api/selector'
 import { RecoveryToken } from '../api/tabRecovery'
 import { BootstrapData, BOOTSTRAP_DATA } from '../api/mainProcess'
@@ -370,19 +371,50 @@ export class AppService {
                 return false
             }
         }
-        for (const tab of this.tabs) {
+        for (const tab of [...this.tabs]) {
             tab.destroy(true)
         }
         return true
     }
 
     async closeWindow (): Promise<void> {
+        if (this.tabs.some(tab => tab.isExiting)) {
+            return
+        }
+
+        if (this.tabs.length > 0) {
+            const modal = this.ngbModal.open(ConfirmModalComponent, {
+                centered: true,
+                windowClass: 'confirm-modal-window',
+                backdropClass: 'confirm-modal-backdrop',
+            })
+            modal.componentInstance.message = 'Close all tabs?'
+            modal.componentInstance.confirmButton = 'Close'
+            modal.componentInstance.cancelButton = 'Do not close'
+            if (!await modal.result.catch(() => false)) {
+                return
+            }
+        }
+
+        this.setTabsExiting(true)
         this.tabRecovery.enabled = false
         await this.tabRecovery.saveTabs(this.tabs)
         if (await this.closeAllTabs()) {
             this.hostWindow.close()
         } else {
+            this.setTabsExiting(false)
             this.tabRecovery.enabled = true
+        }
+    }
+
+    private setTabsExiting (isExiting: boolean): void {
+        for (const tab of this.tabs) {
+            tab.isExiting = isExiting
+            if (tab instanceof SplitTabComponent) {
+                for (const childTab of tab.getAllTabs()) {
+                    childTab.isExiting = isExiting
+                }
+            }
         }
     }
 
