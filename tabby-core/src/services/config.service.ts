@@ -260,6 +260,7 @@ export class ConfigService {
     }
 
     requestRestart (): void {
+        // console.trace('ConfigService.requestRestart')
         this.restartRequested = true
     }
 

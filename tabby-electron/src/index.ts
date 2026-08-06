@@ -161,8 +161,20 @@ export default class ElectronModule {
         )
 
         for (const { packageName, version } of this.config.store.pluginList.filter(plugin => installedPluginVersions.get(plugin.packageName) !== plugin.version)) {
-            // async install plugin
-            (promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version).then(() => this.config.requestRestart())
+            const installedVersion = installedPluginVersions.get(packageName)
+            console.warn('Plugin version mismatch', {
+                packageName,
+                configuredVersion: version,
+                installedVersion,
+            })
+            ;(promiseIpc as RendererProcessType).send('plugin-manager:sync', packageName, version).then(() => {
+                console.warn('Plugin sync completed, requesting restart', {
+                    packageName,
+                    configuredVersion: version,
+                    installedVersion,
+                })
+                this.config.requestRestart()
+            })
         }
     }
 
