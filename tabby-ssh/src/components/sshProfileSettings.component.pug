@@ -305,6 +305,12 @@ ul.nav-tabs(ngbNav, #nav='ngbNav')
     li(ngbNavItem)
         a(ngbNavLink, translate) Input
         ng-template(ngbNavContent)
+            .form-line
+                .header
+                    .title(translate) Legacy cursor sequence fix
+                    .description(translate) Rewrite legacy VT100 cursor erase/right-arrow sequences
+                toggle([(ngModel)]='profile.options.enableLegacyCursorSequenceFix')
+
             input-processing-settings([options]='profile.options.input')
 
 div([ngbNavOutlet]='nav')

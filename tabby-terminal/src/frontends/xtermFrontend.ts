@@ -77,6 +77,7 @@ export class XTermFrontend extends Frontend {
     private configuredTheme: ITheme = {}
     private copyOnSelect = false
     private preventNextOnSelectionChangeEvent = false
+    private enableLegacyCursorSequenceFix = false
     private search = new SearchAddon()
     private searchState: SearchState = { resultCount: 0 }
     private fitAddon = new FitAddon()
@@ -377,16 +378,18 @@ export class XTermFrontend extends Frontend {
 
     async write (data: string): Promise<void> {
         // console.log(`111 [xterm][echo] length: ${data.length}, sample: ${data.slice(0, 200)}`)
-        // Filter legacy VT100/80-col erase sequences when running in xterm mode
-        if (LEGACY_LEFT_ERASE_GROUP.test(data)) {
-            console.log('matched huawei left erase, skipped')
-            LEGACY_LEFT_ERASE_GROUP.lastIndex = 0
-            data = data.replace(LEGACY_LEFT_ERASE_GROUP, m => m.replace(LEGACY_LEFT_ERASE_SEGMENT, '\x1b[1D'))
-        }
-        if (LEGACY_RIGHT_ARROW_GROUP.test(data)) {
-            console.log('matched huawei right arrow, skipped')
-            LEGACY_RIGHT_ARROW_GROUP.lastIndex = 0
-            data = data.replace(LEGACY_RIGHT_ARROW_GROUP, m => m.replace(LEGACY_RIGHT_ARROW_SEGMENT, '\x1b[1C'))
+        if (this.enableLegacyCursorSequenceFix) {
+            // Filter legacy VT100/80-col erase sequences when running in xterm mode
+            if (LEGACY_LEFT_ERASE_GROUP.test(data)) {
+                console.log('matched huawei left erase, skipped')
+                LEGACY_LEFT_ERASE_GROUP.lastIndex = 0
+                data = data.replace(LEGACY_LEFT_ERASE_GROUP, m => m.replace(LEGACY_LEFT_ERASE_SEGMENT, '\x1b[1D'))
+            }
+            if (LEGACY_RIGHT_ARROW_GROUP.test(data)) {
+                console.log('matched huawei right arrow, skipped')
+                LEGACY_RIGHT_ARROW_GROUP.lastIndex = 0
+                data = data.replace(LEGACY_RIGHT_ARROW_GROUP, m => m.replace(LEGACY_RIGHT_ARROW_SEGMENT, '\x1b[1C'))
+            }
         }
         await this.flowControl.write(data)
     }
@@ -485,6 +488,7 @@ export class XTermFrontend extends Frontend {
         this.xterm.options.fontWeight = config.terminal.fontWeight
         this.xterm.options.fontWeightBold = config.terminal.fontWeightBold
         this.xterm.options.minimumContrastRatio = config.terminal.minimumContrastRatio
+        this.enableLegacyCursorSequenceFix = !!(profile as any).options?.enableLegacyCursorSequenceFix
         this.xterm.options.scrollOnEraseInDisplay = true
         this.configuredFontSize = config.terminal.platformFontSize[this.hostApp.platform]
         this.configuredLinePadding = config.terminal.linePadding
