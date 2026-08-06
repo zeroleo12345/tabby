@@ -15,6 +15,7 @@ import { CheckboxComponent } from './components/checkbox.component'
 import { TabBodyComponent } from './components/tabBody.component'
 import { PromptModalComponent } from './components/promptModal.component'
 import { PromptCredentialsModalComponent } from './components/promptCredentialsModal.component'
+import { ConfirmModalComponent } from './components/confirmModal.component'
 import { SafeModeModalComponent } from './components/safeModeModal.component'
 import { StartPageComponent } from './components/startPage.component'
 import { TabHeaderComponent } from './components/tabHeader.component'
@@ -111,6 +112,7 @@ const PROVIDERS = [
         CheckboxComponent,
         PromptModalComponent,
         PromptCredentialsModalComponent,
+        ConfirmModalComponent,
         StartPageComponent,
         TabBodyComponent,
         TabHeaderComponent,
@@ -142,6 +144,7 @@ const PROVIDERS = [
         ToggleComponent,
         PromptModalComponent,
         PromptCredentialsModalComponent,
+        ConfirmModalComponent,
         AutofocusDirective,
         DropZoneDirective,
         FastHtmlBindDirective,
@@ -273,6 +276,7 @@ export default class AppModule { // eslint-disable-line @typescript-eslint/no-ex
 export { AppRootComponent as bootstrap }
 export * from './api'
 export { AppHotkeyProvider }
+export { ConfirmModalComponent }
 
 // Deprecations
 export { ToolbarButton as IToolbarButton } from './api'

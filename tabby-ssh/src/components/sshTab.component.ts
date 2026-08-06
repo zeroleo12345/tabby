@@ -3,7 +3,7 @@ import { marker as _ } from '@biesbjerg/ngx-translate-extract-marker'
 import colors from 'ansi-colors'
 import { Component, Injector, HostListener } from '@angular/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
-import { Platform, ProfilesService } from 'tabby-core'
+import { ConfirmModalComponent, Platform, ProfilesService } from 'tabby-core'
 import { BaseTerminalTabComponent, ConnectableTerminalTabComponent } from 'tabby-terminal'
 import { SSHService } from '../services/ssh.service'
 import { KeyboardInteractivePrompt, SSHSession, SSHAuthenticationCancelledError } from '../session/ssh'
@@ -212,18 +212,15 @@ export class SSHTabComponent extends ConnectableTerminalTabComponent<SSHProfile>
         if (!(this.profile.options.warnOnClose ?? this.config.store.ssh.warnOnClose)) {
             return true
         }
-        return (await this.platform.showMessageBox(
-            {
-                type: 'warning',
-                message: this.translate.instant(_('Disconnect from {host}?'), this.profile.options),
-                buttons: [
-                    this.translate.instant(_('Disconnect')),
-                    this.translate.instant(_('Do not close')),
-                ],
-                defaultId: 0,
-                cancelId: 1,
-            },
-        )).response === 0
+        const modal = this.ngbModal.open(ConfirmModalComponent, {
+            centered: true,
+            windowClass: 'confirm-modal-window',
+            backdropClass: 'confirm-modal-backdrop',
+        })
+        modal.componentInstance.message = this.translate.instant(_('Disconnect from {host}?'), this.profile.options)
+        modal.componentInstance.confirmButton = this.translate.instant(_('Disconnect'))
+        modal.componentInstance.cancelButton = this.translate.instant(_('Do not close'))
+        return await modal.result.catch(() => false)
     }
 
     async openSFTP (): Promise<void> {

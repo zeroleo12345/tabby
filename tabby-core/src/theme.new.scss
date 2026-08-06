@@ -93,6 +93,25 @@ body {
     --bs-emphasis-color: var(--theme-fg-less-2);
 }
 
+.confirm-modal-window {
+    .modal-dialog {
+        max-width: 308px;
+    }
+
+    .modal-content {
+        width: auto;
+        border: 0;
+        border-radius: 46px;
+        background: transparent;
+        box-shadow: none;
+    }
+}
+
+.confirm-modal-backdrop {
+    --bs-backdrop-bg: #1b1d20;
+    --bs-backdrop-opacity: 0.42;
+}
+
 .list-group {
     --bs-list-group-bg: var(--theme-bg-more);
     --bs-list-group-border-color: var(--theme-bg-more-2);
