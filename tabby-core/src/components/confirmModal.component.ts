@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core'
+import { Component, HostListener, Input } from '@angular/core'
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap'
 
 @Component({
@@ -16,6 +16,13 @@ export class ConfirmModalComponent {
     constructor (
         private modalInstance: NgbActiveModal,
     ) { }
+
+    @HostListener('document:keydown.enter', ['$event'])
+    handleEnter (event: KeyboardEvent): void {
+        event.preventDefault()
+        event.stopPropagation()
+        this.confirm()
+    }
 
     confirm (): void {
         this.modalInstance.close(true)
