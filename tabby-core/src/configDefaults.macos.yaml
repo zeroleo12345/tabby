@@ -1,4 +1,5 @@
 hotkeys:
+  close-window: []
   toggle-fullscreen:
     - 'Ctrl+⌘+F'
   close-tab:

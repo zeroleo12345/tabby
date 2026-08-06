@@ -27,6 +27,7 @@ terminal:
   focusFollowsMouse: false
   identification: null
 hotkeys:
+  close-window: []
   profile:
     __nonStructural: true
   profile-selectors:
