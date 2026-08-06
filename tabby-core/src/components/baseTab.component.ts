@@ -61,6 +61,7 @@ export abstract class BaseTabComponent extends BaseComponent {
     private _icon: string|null = null
 
     hasFocus = false
+    isExiting = false
 
     /**
      * Ping this if your recovery state has been changed and you want

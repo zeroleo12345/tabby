@@ -1319,7 +1319,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
 
     override async canClose(): Promise<boolean> {
         if (this.controller && !this.closedByTmux && !this._closeRequestedByTab) {
-            if (this.shouldWarnOnClose()) {
+            if (!this.isExiting && this.shouldWarnOnClose()) {
                 const modal = this._ngbModal.open(ConfirmModalComponent, {
                     centered: true,
                     windowClass: 'confirm-modal-window',

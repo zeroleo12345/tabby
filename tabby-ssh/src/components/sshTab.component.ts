@@ -212,6 +212,9 @@ export class SSHTabComponent extends ConnectableTerminalTabComponent<SSHProfile>
         if (!(this.profile.options.warnOnClose ?? this.config.store.ssh.warnOnClose)) {
             return true
         }
+        if (this.isExiting) {
+            return true
+        }
         const modal = this.ngbModal.open(ConfirmModalComponent, {
             centered: true,
             windowClass: 'confirm-modal-window',
