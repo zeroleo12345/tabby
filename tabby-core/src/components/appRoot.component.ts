@@ -144,6 +144,9 @@ export class AppRootComponent {
             if (hotkey === 'toggle-fullscreen') {
                 hostWindow.toggleFullscreen()
             }
+            if (hotkey === 'close-window') {
+                this.app.closeWindow()
+            }
         })
 
         this.hostWindow.windowCloseRequest$.subscribe(async () => {

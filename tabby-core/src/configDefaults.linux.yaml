@@ -1,4 +1,5 @@
 hotkeys:
+  close-window: []
   toggle-fullscreen:
     - 'F11'
   close-tab:

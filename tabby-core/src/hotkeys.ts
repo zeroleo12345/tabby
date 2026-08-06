@@ -20,6 +20,10 @@ export class AppHotkeyProvider extends HotkeyProvider {
             name: this.translate.instant('Toggle fullscreen mode'),
         },
         {
+            id: 'close-window',
+            name: this.translate.instant('Quit application'),
+        },
+        {
             id: 'rename-tab',
             name: this.translate.instant('Rename tab'),
         },
