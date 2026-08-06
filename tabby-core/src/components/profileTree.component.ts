@@ -228,7 +228,7 @@ export class ProfileTreeComponent extends BaseComponent {
         modal.componentInstance.group = deepClone(group)
         modal.componentInstance.providers = this.profilesService.getProviders()
 
-        const result: PartialProfileGroup<ProfileGroup & { group: PartialProfileGroup<CollapsableProfileGroup>, provider?: ProfileProvider<Profile> }> | null = await modal.result.catch(() => null)
+        const result: { group: PartialProfileGroup<CollapsableProfileGroup>, provider?: ProfileProvider<Profile> } | null = await modal.result.catch(() => null)
         if (!result) { return }
         if (!result.group) { return }
 
@@ -236,9 +236,55 @@ export class ProfileTreeComponent extends BaseComponent {
             return this.editProfileGroupDefaults(result.group, result.provider)
         }
 
-        delete result.group.collapsed
-        delete result.group.children
-        await this.profilesService.writeProfileGroup(result.group)
+        await this.profilesService.writeProfileGroup(ProfileTreeComponent.collapsableIntoPartialProfileGroup(result.group))
+        await this.config.save()
+    }
+
+    private async newProfileGroupInGroup (group: PartialProfileGroup<CollapsableProfileGroup>): Promise<void> {
+        const newGroup: PartialProfileGroup<CollapsableProfileGroup> = {
+            id: 'new',
+            name: '',
+            icon: 'far fa-folder',
+        }
+        if (group.id !== 'ungrouped') {
+            newGroup.parentGroupId = group.id
+        }
+        return this.editProfileGroup(newGroup)
+    }
+
+    private async deleteProfileGroup (group: PartialProfileGroup<CollapsableProfileGroup>): Promise<void> {
+        if ((await this.platform.showMessageBox(
+            {
+                type: 'warning',
+                message: this.translate.instant('Delete "{name}"?', group),
+                buttons: [
+                    this.translate.instant('Delete'),
+                    this.translate.instant('Keep'),
+                ],
+                defaultId: 1,
+                cancelId: 1,
+            },
+        )).response !== 0) {
+            return
+        }
+
+        let deleteProfiles = false
+        if ((group.profiles?.length ?? 0) > 0 && (await this.platform.showMessageBox(
+            {
+                type: 'warning',
+                message: this.translate.instant('Delete the group\'s profiles?'),
+                buttons: [
+                    this.translate.instant('Move to "Ungrouped"'),
+                    this.translate.instant('Delete'),
+                ],
+                defaultId: 0,
+                cancelId: 0,
+            },
+        )).response !== 0) {
+            deleteProfiles = true
+        }
+
+        await this.profilesService.deleteProfileGroup(group, { deleteProfiles })
         await this.config.save()
     }
 
@@ -281,12 +327,14 @@ export class ProfileTreeComponent extends BaseComponent {
                 click: () => this.editProfile(profile),
                 enabled: !(profile.isBuiltin ?? profile.isTemplate),
             },
+            { type: 'separator' },
             {
                 type: 'normal',
                 label: this.translate.instant('Duplicate'),
                 click: () => this.duplicateProfile(profile),
                 enabled: !profile.isBuiltin,
             },
+            { type: 'separator' },
             {
                 type: 'normal',
                 label: this.translate.instant('Delete'),
@@ -301,14 +349,28 @@ export class ProfileTreeComponent extends BaseComponent {
         this.platform.popupContextMenu([
             {
                 type: 'normal',
-                label: this.translate.instant('New profile'),
+                label: this.translate.instant('New Profile'),
                 click: () => this.newProfileInGroup(group),
                 enabled: group.id !== 'built-in',
             },
             {
                 type: 'normal',
-                label: this.translate.instant('Edit group'),
+                label: this.translate.instant('New Group'),
+                click: () => this.newProfileGroupInGroup(group),
+                enabled: group.id !== 'built-in',
+            },
+            { type: 'separator' },
+            {
+                type: 'normal',
+                label: this.translate.instant('Edit'),
                 click: () => this.editProfileGroup(group),
+                enabled: group.editable,
+            },
+            { type: 'separator' },
+            {
+                type: 'normal',
+                label: this.translate.instant('Delete'),
+                click: () => this.deleteProfileGroup(group),
                 enabled: group.editable,
             },
         ])
@@ -384,6 +446,13 @@ export class ProfileTreeComponent extends BaseComponent {
         const profileGroupCollapsed = JSON.parse(window.localStorage.profileGroupCollapsed ?? '{}')
         profileGroupCollapsed[group.id] = group.collapsed
         window.localStorage.profileGroupCollapsed = JSON.stringify(profileGroupCollapsed)
+    }
+
+    private static collapsableIntoPartialProfileGroup (group: PartialProfileGroup<CollapsableProfileGroup>): PartialProfileGroup<ProfileGroup> {
+        const g: any = { ...group }
+        delete g.collapsed
+        delete g.children
+        return g
     }
 
     private static intoPartialCollapsableProfileGroup (group: PartialProfileGroup<ProfileGroup>, collapsed: boolean): PartialProfileGroup<CollapsableProfileGroup> {
