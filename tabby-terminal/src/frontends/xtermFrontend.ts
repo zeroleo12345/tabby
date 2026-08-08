@@ -75,8 +75,9 @@ export class XTermFrontend extends Frontend {
     private zoom = 0
     private resizeHandler: () => void
     private configuredTheme: ITheme = {}
+    private searchMatchBackground = '#ffff00'
     private copyOnSelect = false
-    private preventNextOnSelectionChangeEvent = false
+    private suppressCopyOnSelectUntil = 0
     private enableLegacyCursorSequenceFix = false
     private search = new SearchAddon()
     private searchState: SearchState = { resultCount: 0 }
@@ -137,12 +138,12 @@ export class XTermFrontend extends Frontend {
             this.title.next(title)
         })
         this.xterm.onSelectionChange(() => {
+            const suppressCopy = performance.now() < this.suppressCopyOnSelectUntil
             if (this.getSelection()) {
-                if (this.copyOnSelect && !this.preventNextOnSelectionChangeEvent) {
+                if (this.copyOnSelect && !suppressCopy) {
                     this.copySelection()
                     this.notifications.notice(this.translate.instant('Copied'))
                 }
-                this.preventNextOnSelectionChangeEvent = false
             }
         })
         this.xterm.onBell(() => {
@@ -428,12 +429,13 @@ export class XTermFrontend extends Frontend {
         const appColorScheme = this.themes._getActiveColorScheme() as TerminalColorScheme
 
         scheme = scheme ?? appColorScheme
+        this.searchMatchBackground = scheme.selectionInactiveBackground ?? '#ffff00'
 
         const theme: ITheme = {
             foreground: scheme.foreground,
             selectionBackground: scheme.selection ?? '#88888888',
             selectionForeground: scheme.selectionForeground ?? undefined,
-            selectionInactiveBackground: scheme.selectionInactiveBackground ?? '#ffff00',
+            selectionInactiveBackground: scheme.selection ?? '#88888888',
             background: getTerminalBackgroundColor(this.configService, this.themes, scheme) ?? '#00000000',
             cursor: scheme.cursor,
             cursorAccent: scheme.cursorAccent,
@@ -516,8 +518,8 @@ export class XTermFrontend extends Frontend {
             decorations: {
                 matchOverviewRuler: '#888888',
                 activeMatchColorOverviewRuler: '#ffff00',
-                matchBackground: this.xterm.options.theme?.selectionBackground,
-                activeMatchBackground: this.xterm.options.theme?.selectionInactiveBackground,
+                matchBackground: this.searchMatchBackground,
+                activeMatchBackground: this.xterm.options.theme?.selectionBackground,
             },
         }
     }
@@ -531,7 +533,7 @@ export class XTermFrontend extends Frontend {
 
     findNext (term: string, searchOptions?: SearchOptions): SearchState {
         if (this.copyOnSelect) {
-            this.preventNextOnSelectionChangeEvent = true
+            this.suppressCopyOnSelectUntil = performance.now() + 250
         }
         return this.wrapSearchResult(
             this.search.findNext(term, this.getSearchOptions(searchOptions)),
@@ -540,7 +542,7 @@ export class XTermFrontend extends Frontend {
 
     findPrevious (term: string, searchOptions?: SearchOptions): SearchState {
         if (this.copyOnSelect) {
-            this.preventNextOnSelectionChangeEvent = true
+            this.suppressCopyOnSelectUntil = performance.now() + 250
         }
         return this.wrapSearchResult(
             this.search.findPrevious(term, this.getSearchOptions(searchOptions)),
