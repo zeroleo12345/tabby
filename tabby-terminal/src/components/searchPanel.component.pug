@@ -6,6 +6,7 @@
         (ngModelChange)='onQueryChange()',
         [class.text-danger]='state.resultCount == 0',
         (click)='$event.stopPropagation()',
+        (blur)='onInputBlur()',
         (keyup.enter)='findPrevious()',
         (keyup.shift.enter)='findNext()',
         (keyup.up)='findPrevious()',

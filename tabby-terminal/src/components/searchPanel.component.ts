@@ -46,6 +46,12 @@ export class SearchPanelComponent {
         this.queryChanged.next(this.query)
     }
 
+    onInputBlur (): void {
+        if (!this.query?.trim()) {
+            this.close.emit()
+        }
+    }
+
     hasFocus (): boolean {
         return document.activeElement === this.input?.nativeElement
     }
