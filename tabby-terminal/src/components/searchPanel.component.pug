@@ -7,6 +7,7 @@
         [class.text-danger]='state.resultCount == 0',
         (click)='$event.stopPropagation()',
         (keyup.enter)='findPrevious()',
+        (keyup.shift.enter)='findNext()',
         (keyup.up)='findPrevious()',
         (keyup.down)='findNext()',
         (keyup.esc)='close.emit()',
