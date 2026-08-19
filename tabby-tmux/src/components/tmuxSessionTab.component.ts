@@ -1,7 +1,7 @@
 import { Component, Injector, Input, OnInit, OnDestroy, ChangeDetectorRef, ElementRef } from '@angular/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import { Subscription } from 'rxjs'
-import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService, ConfirmModalComponent } from 'tabby-core'
+import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
 import { TerminalColorScheme } from 'tabby-terminal'
 import { TmuxController } from '../session'
@@ -36,6 +36,12 @@ export interface TmuxSessionProfile {
         '[class.tmux-session-host]': 'true'
     },
     template: `
+        <tmux-window-bar
+            [controller]="controller"
+            [attachedWindowIds]="attachedWindowIds"
+            (windowOpen)="onWindowOpen($event)"
+            (windowClose)="onWindowClose($event)"
+        ></tmux-window-bar>
         <div class="pane-area" #paneAreaEl>
             <ng-container #vc></ng-container>
         </div>
@@ -98,7 +104,6 @@ export interface TmuxSessionProfile {
 export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit, OnDestroy {
     readonly isTmuxSessionTab = true
     closedByTmux = false
-    private _closeRequestedByTab = false
 
     @Input() profile: TmuxSessionProfile = {}
     @Input() existingController!: TmuxController
@@ -131,6 +136,16 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
 
     /** Active divider DOM elements for the current window layout */
     private _dividerElements: HTMLElement[] = []
+
+    /**
+     * Tmux windows that already have a native Tabby tab. The status bar uses
+     * this to show only detached windows, so it remains a concise recovery
+     * surface instead of duplicating the main tab strip.
+     */
+    get attachedWindowIds (): number[] {
+        const context = this.tmuxService.findContextForTab(this)
+        return context ? [...context.sessionTabs.keys()] : [this.windowId]
+    }
 
     constructor(
         injector: Injector,
@@ -1231,6 +1246,13 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
     }
 
+    async onWindowOpen(windowId: number): Promise<void> {
+        const context = this.tmuxService.findContextForTab(this)
+        if (context) {
+            await this.tmuxService.openWindowTab(context, windowId)
+        }
+    }
+
     async onCreateWindow(): Promise<void> {
         if (this.controller) {
             const newWindowId = await this.controller.createWindow()
@@ -1318,40 +1340,10 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     }
 
     override async canClose(): Promise<boolean> {
-        if (this.controller && !this.closedByTmux && !this._closeRequestedByTab) {
-            if (!this.isExiting && this.shouldWarnOnClose()) {
-                const modal = this._ngbModal.open(ConfirmModalComponent, {
-                    centered: true,
-                    windowClass: 'confirm-modal-window',
-                    backdropClass: 'confirm-modal-backdrop',
-                })
-                modal.componentInstance.message = 'Close tmux window?'
-                modal.componentInstance.confirmButton = 'Close'
-                modal.componentInstance.cancelButton = 'Do not close'
-                const confirmed = await modal.result.catch(() => false)
-                if (!confirmed) {
-                    return false
-                }
-            }
-
-            this._closeRequestedByTab = true
-            try {
-                await this.controller.killWindow(this.windowId)
-                this.closedByTmux = true
-            } catch (e) {
-                this._closeRequestedByTab = false
-                this.logger.warn(`Failed to close tmux window @${this.windowId}:`, e)
-                return false
-            }
-        }
+        // A native Tabby tab is only a view onto a tmux window. Closing it must
+        // detach that view, not kill the tmux process and lose its scrollback.
+        // Explicit destruction remains available from the detached-window bar.
         return true
-    }
-
-    private shouldWarnOnClose(): boolean {
-        const ctx = this.tmuxService.findContextForTab(this)
-        return (this.profile as any)?.options?.warnOnClose ??
-            ctx?.terminalTab?.profile?.options?.warnOnClose ??
-            this.configService.store.ssh.warnOnClose
     }
 
     /**
