@@ -369,6 +369,10 @@ export class TmuxService {
             return
         }
 
+        // This window already exists in tmux, so refreshPanes() treats its
+        // panes as known and does not produce fresh history snapshots. Capture
+        // them explicitly before constructing the replacement Tabby view.
+        await context.controller.captureWindowSnapshots(windowId)
         this.ensureWindowTab(context, windowId)
         const tab = context.sessionTabs.get(windowId)
         if (tab) {
