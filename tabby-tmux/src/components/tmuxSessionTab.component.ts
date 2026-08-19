@@ -3,7 +3,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import { Subscription } from 'rxjs'
 import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
-import { TerminalColorScheme } from 'tabby-terminal'
+import { BaseTerminalTabComponent, TerminalColorScheme } from 'tabby-terminal'
 import { TmuxController } from '../session'
 import type { TmuxService } from '../services/tmux.service'
 import { TMUX_COMMAND_TOLERATE_ERRORS } from '../gateway'
@@ -36,6 +36,20 @@ export interface TmuxSessionProfile {
         '[class.tmux-session-host]': 'true'
     },
     template: `
+        <!-- Keep the original terminal connection toolbar as the first row.
+             Tmux's detached-window bar is deliberately a second row below it. -->
+        <terminal-toolbar *ngIf="hostTerminalTab" [tab]="hostTerminalTab">
+            <i class="fas fa-xs fa-circle me-2"
+                [class.text-success]="hostTerminalTab.session?.open"
+                [class.text-danger]="!hostTerminalTab.session?.open"></i>
+            <strong class="me-auto connection-name"
+                style="user-select: text; cursor: text;"
+                onclick="event.stopPropagation()">{{ hostConnectionName }}</strong>
+            <button class="btn btn-sm btn-link me-2" (click)="onHostReconnect()">
+                <i class="fas fa-redo"></i>
+                <span>Reconnect</span>
+            </button>
+        </terminal-toolbar>
         <tmux-window-bar
             [controller]="controller"
             [attachedWindowIds]="attachedWindowIds"
@@ -60,6 +74,19 @@ export interface TmuxSessionProfile {
             min-height: 0;
             padding: 4px;
             box-sizing: border-box;
+        }
+        /* terminal-toolbar is normally absolutely positioned by
+           BaseTerminalTabComponent. Here it is a real first status row. */
+        :host > terminal-toolbar {
+            flex: 0 0 auto;
+            min-height: 40px;
+            background: rgba(30, 30, 30, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .connection-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         /* Pane containers: pixel-absolute positioned by applyPixelLayout().
            No border, no padding — the xterm canvas fills the entire box. */
@@ -145,6 +172,20 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     get attachedWindowIds (): number[] {
         const context = this.tmuxService.findContextForTab(this)
         return context ? [...context.sessionTabs.keys()] : [this.windowId]
+    }
+
+    /** The hidden source terminal still owns the SSH/local connection. */
+    get hostTerminalTab (): BaseTerminalTabComponent<any> | null {
+        return this.tmuxService.findContextForTab(this)?.terminalTab ?? null
+    }
+
+    get hostConnectionName (): string {
+        const profile: any = this.hostTerminalTab?.profile
+        const options = profile?.options
+        if (options?.host) {
+            return `${options.user ? `${options.user}@` : ''}${options.host}${options.port ? `:${options.port}` : ''}`
+        }
+        return profile?.name ?? this.sessionName
     }
 
     constructor(
@@ -1251,6 +1292,10 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         if (context) {
             await this.tmuxService.openWindowTab(context, windowId)
         }
+    }
+
+    async onHostReconnect(): Promise<void> {
+        await (this.hostTerminalTab as any)?.reconnect?.()
     }
 
     async onCreateWindow(): Promise<void> {

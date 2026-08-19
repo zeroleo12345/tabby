@@ -15,7 +15,7 @@ interface WindowInfo {
             <span class="status-label">Detached tmux windows</span>
             <div class="window-tabs">
                 <button
-                    *ngFor="let win of windows"
+                    *ngFor="let win of windows; trackBy: trackByWindowId"
                     class="window-tab"
                     (click)="windowOpen.emit(win.id)"
                     (contextmenu)="onContextMenu($event, win)"
@@ -168,7 +168,10 @@ export class TmuxWindowBarComponent implements OnInit, OnDestroy, OnChanges {
     private refreshWindows(): void {
         if (!this.controller) {
             this.windows = []
-            this.cdr.detectChanges()
+            // This method can be called from ngOnChanges. Running a synchronous
+            // change detection pass there recreates the hovered button and makes
+            // its hover state flicker. Let Angular render on its normal pass.
+            this.cdr.markForCheck()
             return
         }
 
@@ -179,12 +182,17 @@ export class TmuxWindowBarComponent implements OnInit, OnDestroy, OnChanges {
             name: ws.name,
             paneCount: ws.panes.size,
         }))
-        this.cdr.detectChanges()
+        this.cdr.markForCheck()
     }
 
     onCloseWindow(event: MouseEvent, win: WindowInfo): void {
         event.stopPropagation()
         this.windowClose.emit(win.id)
+    }
+
+    /** Keep a hovered button's DOM node stable across parent change detection. */
+    trackByWindowId (_index: number, win: WindowInfo): number {
+        return win.id
     }
 
     onContextMenu(event: MouseEvent, _win: WindowInfo): void {
