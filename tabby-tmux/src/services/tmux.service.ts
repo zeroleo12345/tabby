@@ -237,8 +237,21 @@ export class TmuxService {
 
     private setupControllerEvents (context: SessionContext): void {
         context.subscriptions.push(context.controller.events.subscribe(event => {
-            if (event.type === 'initialized' || event.type === 'session-changed') {
+            // %begin/%end only say that a control-mode command completed.  Do
+            // not replace the terminal on that basis: a server that is being
+            // killed may finish a response block immediately before %exit.
+            // %session-changed is tmux's semantic confirmation that this
+            // control client has attached to a session.
+            if (event.type === 'session-changed') {
+                if (!context.active) {
+                    context.active = true
+                    this.log.info('Tmux control client attached; activating tmux UI')
+                }
                 this.ensureWindowTabs(context)
+            } else if (!context.active) {
+                // While probing, continue parsing protocol data but never let
+                // initial response/notification traffic create Tabby tabs.
+                return
             } else if (event.type === 'window-add' && event.windowId !== undefined) {
                 this.ensureWindowTab(context, event.windowId)
             } else if (event.type === 'window-close' && event.windowId !== undefined) {
@@ -424,7 +437,7 @@ export class TmuxService {
             context.outputInterceptor = undefined
         }
 
-        if (context.active) {
+        if (context.controller) {
             await context.controller.destroy()
         }
 
@@ -507,12 +520,11 @@ export class TmuxService {
         this.sessions.add(context)
 
         context.subscriptions.push(interceptor.controlModeDetected$.subscribe((initialData: Buffer) => {
-            if (context.active) {
+            if (context.controller) {
                 return
             }
 
-            this.log.info('Detected tmux control mode output, activating tmux UI')
-            context.active = true
+            this.log.info('Detected tmux control mode output; waiting for session attachment')
 
             // Create a controller that uses the terminal's session for I/O
             context.controller = new TmuxController(
