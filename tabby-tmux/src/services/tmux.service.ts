@@ -355,11 +355,30 @@ export class TmuxService {
         context.subscriptions.push(sessionTab.destroyed$.subscribe(() => {
             if (context.sessionTabs.get(windowId) === sessionTab) {
                 context.sessionTabs.delete(windowId)
-                if (!sessionTab.closedByTmux && !context.disconnecting && context.active) {
-                    context.controller.killWindow(windowId).catch(() => { /* window may already be gone */ })
-                }
+                // Closing a native Tabby tab only detaches its view. Keep the
+                // tmux window alive so its process and scrollback can later be
+                // reopened from the detached-window bar (or a new -CC attach).
+                ;(this.appService as any).tabsChanged.next()
             }
         }))
+    }
+
+    /** Recreate a native terminal tab for a tmux window that was detached. */
+    async openWindowTab (context: SessionContext, windowId: number): Promise<void> {
+        if (!context.active || !context.controller.getWindowState(windowId)) {
+            return
+        }
+
+        // This window already exists in tmux, so refreshPanes() treats its
+        // panes as known and does not produce fresh history snapshots. Capture
+        // them explicitly before constructing the replacement Tabby view.
+        await context.controller.captureWindowSnapshots(windowId)
+        this.ensureWindowTab(context, windowId)
+        const tab = context.sessionTabs.get(windowId)
+        if (tab) {
+            ;(this.appService as any).selectTab(tab)
+            await context.controller.selectWindow(windowId)
+        }
     }
 
     private removeWindowTab (context: SessionContext, windowId: number): void {

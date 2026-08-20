@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core'
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core'
 import { Subscription } from 'rxjs'
 import { TmuxController } from '../session'
 
@@ -11,29 +11,21 @@ interface WindowInfo {
 @Component({
     selector: 'tmux-window-bar',
     template: `
-        <div class="window-bar">
+        <div class="window-bar" *ngIf="windows.length">
+            <span class="status-label">Detached tmux windows</span>
             <div class="window-tabs">
                 <button
-                    *ngFor="let win of windows"
+                    *ngFor="let win of windows; trackBy: trackByWindowId"
                     class="window-tab"
-                    [class.active]="win.id === activeWindowId"
-                    (click)="windowSwitch.emit(win.id)"
+                    (click)="windowOpen.emit(win.id)"
                     (contextmenu)="onContextMenu($event, win)"
-                    [title]="win.name"
+                    title="Reopen this tmux window in a terminal tab"
                 >
                     <span class="window-name">{{ win.name }}</span>
                     <span class="pane-badge" *ngIf="win.paneCount > 1">{{ win.paneCount }}</span>
                     <span class="window-close" title="Close Window" (click)="onCloseWindow($event, win)">
                         <i class="fas fa-times"></i>
                     </span>
-                </button>
-                <button class="window-tab add-btn" title="New Window" (click)="createWindow.emit()">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-            <div class="bar-actions">
-                <button class="bar-btn" title="Disconnect" (click)="disconnect.emit()">
-                    <i class="fas fa-eject"></i>
                 </button>
             </div>
         </div>
@@ -61,6 +53,13 @@ interface WindowInfo {
             flex: 1;
             min-width: 0;
         }
+        .status-label {
+            flex: 0 0 auto;
+            margin-right: 8px;
+            color: #777;
+            font-size: 0.78em;
+            white-space: nowrap;
+        }
         .window-tab {
             display: flex;
             align-items: center;
@@ -79,11 +78,6 @@ interface WindowInfo {
         .window-tab:hover {
             background: rgba(255, 255, 255, 0.08);
             color: #ccc;
-        }
-        .window-tab.active {
-            background: rgba(255, 255, 255, 0.12);
-            color: #fff;
-            border-color: rgba(255, 255, 255, 0.15);
         }
         .pane-badge {
             display: inline-flex;
@@ -119,46 +113,15 @@ interface WindowInfo {
             background: rgba(255, 80, 80, 0.3);
             color: #f66;
         }
-        .add-btn {
-            color: #666;
-            padding: 0 6px;
-        }
-        .add-btn:hover {
-            color: #aaa;
-        }
-        .bar-actions {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            margin-left: 8px;
-        }
-        .bar-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            border: none;
-            border-radius: 3px;
-            background: transparent;
-            color: #888;
-            font-size: 0.8em;
-            cursor: pointer;
-        }
-        .bar-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ccc;
-        }
     `]
 })
-export class TmuxWindowBarComponent implements OnInit, OnDestroy {
+export class TmuxWindowBarComponent implements OnInit, OnDestroy, OnChanges {
     @Input() controller: TmuxController
-    @Input() activeWindowId: number | null = null
+    /** Window IDs currently represented by a native terminal tab. */
+    @Input() attachedWindowIds: number[] = []
 
-    @Output() windowSwitch = new EventEmitter<number>()
+    @Output() windowOpen = new EventEmitter<number>()
     @Output() windowClose = new EventEmitter<number>()
-    @Output() disconnect = new EventEmitter<void>()
-    @Output() createWindow = new EventEmitter<void>()
 
     windows: WindowInfo[] = []
 
@@ -192,6 +155,12 @@ export class TmuxWindowBarComponent implements OnInit, OnDestroy {
         })
     }
 
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes.controller || changes.attachedWindowIds) {
+            this.refreshWindows()
+        }
+    }
+
     ngOnDestroy(): void {
         this.subscription?.unsubscribe()
     }
@@ -199,22 +168,31 @@ export class TmuxWindowBarComponent implements OnInit, OnDestroy {
     private refreshWindows(): void {
         if (!this.controller) {
             this.windows = []
-            this.cdr.detectChanges()
+            // This method can be called from ngOnChanges. Running a synchronous
+            // change detection pass there recreates the hovered button and makes
+            // its hover state flicker. Let Angular render on its normal pass.
+            this.cdr.markForCheck()
             return
         }
 
+        const attachedWindowIds = new Set(this.attachedWindowIds)
         const windowStates = this.controller.getAllWindowStates()
-        this.windows = windowStates.map(ws => ({
+        this.windows = windowStates.filter(ws => !attachedWindowIds.has(ws.id)).map(ws => ({
             id: ws.id,
             name: ws.name,
             paneCount: ws.panes.size,
         }))
-        this.cdr.detectChanges()
+        this.cdr.markForCheck()
     }
 
     onCloseWindow(event: MouseEvent, win: WindowInfo): void {
         event.stopPropagation()
         this.windowClose.emit(win.id)
+    }
+
+    /** Keep a hovered button's DOM node stable across parent change detection. */
+    trackByWindowId (_index: number, win: WindowInfo): number {
+        return win.id
     }
 
     onContextMenu(event: MouseEvent, _win: WindowInfo): void {

@@ -1,9 +1,9 @@
 import { Component, Injector, Input, OnInit, OnDestroy, ChangeDetectorRef, ElementRef } from '@angular/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import { Subscription } from 'rxjs'
-import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService, ConfirmModalComponent } from 'tabby-core'
+import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
-import { TerminalColorScheme } from 'tabby-terminal'
+import { BaseTerminalTabComponent, TerminalColorScheme } from 'tabby-terminal'
 import { TmuxController } from '../session'
 import type { TmuxService } from '../services/tmux.service'
 import { TMUX_COMMAND_TOLERATE_ERRORS } from '../gateway'
@@ -36,6 +36,26 @@ export interface TmuxSessionProfile {
         '[class.tmux-session-host]': 'true'
     },
     template: `
+        <!-- Keep the original terminal connection toolbar as the first row.
+             Tmux's detached-window bar is deliberately a second row below it. -->
+        <terminal-toolbar *ngIf="hostTerminalTab" [tab]="hostTerminalTab">
+            <i class="fas fa-xs fa-circle me-2"
+                [class.text-success]="hostTerminalTab.session?.open"
+                [class.text-danger]="!hostTerminalTab.session?.open"></i>
+            <strong class="me-auto connection-name"
+                style="user-select: text; cursor: text;"
+                onclick="event.stopPropagation()">{{ hostConnectionName }}</strong>
+            <button class="btn btn-sm btn-link me-2" (click)="onHostReconnect()">
+                <i class="fas fa-redo"></i>
+                <span>Reconnect</span>
+            </button>
+        </terminal-toolbar>
+        <tmux-window-bar
+            [controller]="controller"
+            [attachedWindowIds]="attachedWindowIds"
+            (windowOpen)="onWindowOpen($event)"
+            (windowClose)="onWindowClose($event)"
+        ></tmux-window-bar>
         <div class="pane-area" #paneAreaEl>
             <ng-container #vc></ng-container>
         </div>
@@ -54,6 +74,19 @@ export interface TmuxSessionProfile {
             min-height: 0;
             padding: 4px;
             box-sizing: border-box;
+        }
+        /* terminal-toolbar is normally absolutely positioned by
+           BaseTerminalTabComponent. Here it is a real first status row. */
+        :host > terminal-toolbar {
+            flex: 0 0 auto;
+            min-height: 40px;
+            background: rgba(30, 30, 30, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .connection-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         /* Pane containers: pixel-absolute positioned by applyPixelLayout().
            No border, no padding — the xterm canvas fills the entire box. */
@@ -98,7 +131,6 @@ export interface TmuxSessionProfile {
 export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit, OnDestroy {
     readonly isTmuxSessionTab = true
     closedByTmux = false
-    private _closeRequestedByTab = false
 
     @Input() profile: TmuxSessionProfile = {}
     @Input() existingController!: TmuxController
@@ -131,6 +163,30 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
 
     /** Active divider DOM elements for the current window layout */
     private _dividerElements: HTMLElement[] = []
+
+    /**
+     * Tmux windows that already have a native Tabby tab. The status bar uses
+     * this to show only detached windows, so it remains a concise recovery
+     * surface instead of duplicating the main tab strip.
+     */
+    get attachedWindowIds (): number[] {
+        const context = this.tmuxService.findContextForTab(this)
+        return context ? [...context.sessionTabs.keys()] : [this.windowId]
+    }
+
+    /** The hidden source terminal still owns the SSH/local connection. */
+    get hostTerminalTab (): BaseTerminalTabComponent<any> | null {
+        return this.tmuxService.findContextForTab(this)?.terminalTab ?? null
+    }
+
+    get hostConnectionName (): string {
+        const profile: any = this.hostTerminalTab?.profile
+        const options = profile?.options
+        if (options?.host) {
+            return `${options.user ? `${options.user}@` : ''}${options.host}${options.port ? `:${options.port}` : ''}`
+        }
+        return profile?.name ?? this.sessionName
+    }
 
     constructor(
         injector: Injector,
@@ -1231,6 +1287,17 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
     }
 
+    async onWindowOpen(windowId: number): Promise<void> {
+        const context = this.tmuxService.findContextForTab(this)
+        if (context) {
+            await this.tmuxService.openWindowTab(context, windowId)
+        }
+    }
+
+    async onHostReconnect(): Promise<void> {
+        await (this.hostTerminalTab as any)?.reconnect?.()
+    }
+
     async onCreateWindow(): Promise<void> {
         if (this.controller) {
             const newWindowId = await this.controller.createWindow()
@@ -1318,40 +1385,10 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     }
 
     override async canClose(): Promise<boolean> {
-        if (this.controller && !this.closedByTmux && !this._closeRequestedByTab) {
-            if (!this.isExiting && this.shouldWarnOnClose()) {
-                const modal = this._ngbModal.open(ConfirmModalComponent, {
-                    centered: true,
-                    windowClass: 'confirm-modal-window',
-                    backdropClass: 'confirm-modal-backdrop',
-                })
-                modal.componentInstance.message = 'Close tmux window?'
-                modal.componentInstance.confirmButton = 'Close'
-                modal.componentInstance.cancelButton = 'Do not close'
-                const confirmed = await modal.result.catch(() => false)
-                if (!confirmed) {
-                    return false
-                }
-            }
-
-            this._closeRequestedByTab = true
-            try {
-                await this.controller.killWindow(this.windowId)
-                this.closedByTmux = true
-            } catch (e) {
-                this._closeRequestedByTab = false
-                this.logger.warn(`Failed to close tmux window @${this.windowId}:`, e)
-                return false
-            }
-        }
+        // A native Tabby tab is only a view onto a tmux window. Closing it must
+        // detach that view, not kill the tmux process and lose its scrollback.
+        // Explicit destruction remains available from the detached-window bar.
         return true
-    }
-
-    private shouldWarnOnClose(): boolean {
-        const ctx = this.tmuxService.findContextForTab(this)
-        return (this.profile as any)?.options?.warnOnClose ??
-            ctx?.terminalTab?.profile?.options?.warnOnClose ??
-            this.configService.store.ssh.warnOnClose
     }
 
     /**

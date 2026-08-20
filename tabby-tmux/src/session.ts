@@ -694,6 +694,19 @@ export class TmuxController {
         await Promise.all(captures)
     }
 
+    /**
+     * Refresh history snapshots for an already known window before attaching a
+     * new Tabby view to it. Unlike a window-add path, these panes are already
+     * in knownPanes, so refreshPanes() intentionally does not capture them.
+     */
+    async captureWindowSnapshots (windowId: number): Promise<void> {
+        const window = this.windowStates.get(windowId)
+        if (!window) {
+            return
+        }
+        await this.capturePaneSnapshots([...window.panes].map(paneId => ({ paneId, windowId })))
+    }
+
 
     // --- Pane Management ---
     registerPane (paneId: number, session: TmuxPaneSession): void {
