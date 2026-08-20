@@ -195,6 +195,8 @@ interface DisconnectOptions {
     detach?: boolean
     /** Reinstall the passive control-mode listener after restoring the shell tab. */
     rearm?: boolean
+    /** Destroy the hidden host tab instead of restoring it to the tab bar. */
+    closeHost?: boolean
 }
 
 @Injectable({ providedIn: 'root' })
@@ -355,10 +357,17 @@ export class TmuxService {
         context.subscriptions.push(sessionTab.destroyed$.subscribe(() => {
             if (context.sessionTabs.get(windowId) === sessionTab) {
                 context.sessionTabs.delete(windowId)
-                // Closing a native Tabby tab only detaches its view. Keep the
-                // tmux window alive so its process and scrollback can later be
-                // reopened from the detached-window bar (or a new -CC attach).
                 ;(this.appService as any).tabsChanged.next()
+
+                // Individual window tabs are detachable views. Once the last
+                // view is gone, however, there is nothing left that can use
+                // the hidden SSH/control-mode host. Close it rather than
+                // leaving it to be unexpectedly restored by a later %exit
+                // (for example, after kill-server from another SSH tab).
+                if (!context.disconnecting && context.active && context.sessionTabs.size === 0) {
+                    this.log.info('Last tmux window tab closed; closing hidden host tab')
+                    void this.disconnectContext(context, { closeHost: true })
+                }
             }
         }))
     }
@@ -400,8 +409,13 @@ export class TmuxService {
     }
 
     async disconnectContext (context: SessionContext, options: DisconnectOptions = {}): Promise<void> {
+        if (context.disconnecting) {
+            return
+        }
+
         const detach = options.detach ?? true
         const rearm = options.rearm ?? false
+        const closeHost = options.closeHost ?? false
 
         this.sessions.delete(context)
         context.disconnecting = true
@@ -434,8 +448,12 @@ export class TmuxService {
         }
         context.sessionTabs.clear()
 
-        // Restore the original topmost tab to the tab bar at its original position
-        if (context.topmostTab) {
+        // Restore the original topmost tab unless the last tmux window view was
+        // closed. In that case it is the hidden SSH/control-mode host and must
+        // be destroyed so a later server-side %exit cannot resurrect it.
+        if (context.topmostTab && closeHost) {
+            context.topmostTab.destroy()
+        } else if (context.topmostTab) {
             const tabs: any[] = (this.appService as any).tabs
             const insertAt = context.topmostTabIndex !== undefined
                 ? Math.min(context.topmostTabIndex, tabs.length)
@@ -450,7 +468,7 @@ export class TmuxService {
 
         this.log.info('Disconnected tmux context')
 
-        if (rearm && context.terminalTab.session === context.session && context.session.open) {
+        if (!closeHost && rearm && context.terminalTab.session === context.session && context.session.open) {
             await this.attachToTerminal(context.terminalTab)
         }
     }
