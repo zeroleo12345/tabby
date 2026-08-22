@@ -226,6 +226,13 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         this.updateTmuxTitle()
 
         this._focusSubscription = this.focused$.subscribe(() => {
+            // SplitTab's normal focus propagation is not sufficient here. Tmux
+            // panes deliberately stay focused while visible so their xterm
+            // frontends remain initialized. When switching native Tabby tabs,
+            // the browser can therefore keep its DOM focus on the xterm in the
+            // previously selected tmux window. Explicitly restore the pane for
+            // this window before synchronizing tmux's active window.
+            this.restoreKeyboardFocus()
             if (this.controller && this.windowId !== undefined && this.controller.getActiveWindowId() !== this.windowId) {
                 this.controller.selectWindow(this.windowId).catch(() => { /* best-effort focus sync */ })
             }
@@ -593,6 +600,42 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
                 t._tmuxActive = (t === tab)
             }
         }
+    }
+
+    /**
+     * Move native keyboard focus to this window's active pane.
+     *
+     * Unlike a regular SplitTab, tmux panes cannot be blurred just because
+     * another pane/window is visible: doing so unloads their xterm frontend.
+     * Consequently the browser's active element may still be the textarea of
+     * the previously selected native tab. Re-emitting focus for the selected
+     * pane makes xterm claim the DOM focus and keeps ordinary typed input on
+     * the same pane as Tabby's active tab.
+     */
+    private restoreKeyboardFocus (): void {
+        const paneMap = this.windowPaneTabs.get(this.windowId)
+        if (!paneMap?.size) {
+            return
+        }
+
+        const focusedTab = this.getFocusedTab()
+        const pane = (this.activePaneId !== null ? paneMap.get(this.activePaneId) : undefined) ??
+            (focusedTab instanceof TmuxPaneTabComponent ? focusedTab : undefined) ??
+            paneMap.values().next().value
+        if (!pane) {
+            return
+        }
+
+        this.focus(pane)
+
+        // BaseTerminalTabComponent focuses xterm asynchronously. Repeat the
+        // native focus after the tab switch has been rendered, but only if this
+        // tab is still active, so a rapid subsequent tab switch cannot steal it.
+        setTimeout(() => {
+            if (this.hasFocus && this.getFocusedTab() === pane) {
+                pane.frontend?.focus()
+            }
+        })
     }
 
     /**
