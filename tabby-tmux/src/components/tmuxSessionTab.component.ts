@@ -72,7 +72,11 @@ export interface TmuxSessionProfile {
             flex: 1 1 0;
             position: relative;
             min-height: 0;
-            padding: 4px;
+            /* Use the same four-sided inset as an SSH terminal tab. Tmux panes
+               are pixel-positioned, so padding would otherwise create a
+               platform-specific grid that differs from xterm's fitted grid. */
+            margin: calc(max(0px, 30px * var(--spaciness) - 15px));
+            padding: 0;
             box-sizing: border-box;
         }
         /* terminal-toolbar is normally absolutely positioned by
@@ -1077,15 +1081,17 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     /**
      * Measure the whole-window character grid from the .pane-area container.
      *
-     * Pure pixel-to-cell conversion. Uses clientWidth/clientHeight to
-     * exclude padding from the measurement — pane-area padding is purely
-     * cosmetic and must not affect the tmux grid calculation.
+     * Pure pixel-to-cell conversion. clientWidth/clientHeight include CSS
+     * padding, so subtract it explicitly. The padding is cosmetic and must
+     * not be converted into an extra tmux row/column.
      */
     private measureClientSize(): { cols: number; rows: number } | null {
         const host = this.hostElement.nativeElement as HTMLElement
         const paneArea = host.querySelector('.pane-area') ?? host
-        const pw = (paneArea as HTMLElement).clientWidth
-        const ph = (paneArea as HTMLElement).clientHeight
+        const paneAreaElement = paneArea as HTMLElement
+        const style = getComputedStyle(paneAreaElement)
+        const pw = paneAreaElement.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+        const ph = paneAreaElement.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
         if (pw < 10 || ph < 10) return null
 
         const cell = this.getCellSize()
