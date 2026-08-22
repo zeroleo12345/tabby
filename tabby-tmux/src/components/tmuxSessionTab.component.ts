@@ -58,6 +58,10 @@ export interface TmuxSessionProfile {
         ></tmux-window-bar>
         <div class="pane-area" #paneAreaEl>
             <ng-container #vc></ng-container>
+            <div class="recovery-overlay" *ngIf="recovering">
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                {{ recoveryError || 'Restoring tmux window…' }}
+            </div>
         </div>
     `,
     styles: [`
@@ -72,7 +76,11 @@ export interface TmuxSessionProfile {
             flex: 1 1 0;
             position: relative;
             min-height: 0;
-            padding: 4px;
+            /* Use the same four-sided inset as an SSH terminal tab. Tmux panes
+               are pixel-positioned, so padding would otherwise create a
+               platform-specific grid that differs from xterm's fitted grid. */
+            margin: calc(max(0px, 30px * var(--spaciness) - 15px));
+            padding: 0;
             box-sizing: border-box;
         }
         /* terminal-toolbar is normally absolutely positioned by
@@ -93,6 +101,17 @@ export interface TmuxSessionProfile {
         ::ng-deep .pane-area > .child {
             position: absolute;
             box-sizing: border-box;
+        }
+        .recovery-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.35);
+            pointer-events: all;
+            user-select: none;
         }
         /* Independent divider elements for pane boundaries + resize dragging.
            Width/height is set inline to 1 cell to match tmux's 1-char separator.
@@ -160,6 +179,10 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     private _lastSentCols = 0
     private _lastSentRows = 0
     private _focusSubscription: Subscription | null = null
+    /** Keep input blocked until every pane in this native window is restored. */
+    recovering = true
+    recoveryError: string | null = null
+    private recoveryGeneration = 0
 
     /** Active divider DOM elements for the current window layout */
     private _dividerElements: HTMLElement[] = []
@@ -557,6 +580,52 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
                 this.refreshClientSize()
             })
         }
+
+        void this.completeRecovery(windowId)
+    }
+
+    /**
+     * Do not let a partially restored xterm receive user input. Snapshot
+     * restoration is point-in-time; after all panes render their snapshot and
+     * buffered output, input is enabled together for this window.
+     */
+    private async completeRecovery (windowId: number): Promise<void> {
+        const generation = ++this.recoveryGeneration
+        this.recovering = true
+        this.recoveryError = null
+        this.cdr.detectChanges()
+
+        const paneMap = this.windowPaneTabs.get(windowId)
+        // Zoom-hidden panes have no mounted xterm and therefore cannot finish
+        // recovery yet. They are gated separately when they become visible.
+        const panes = paneMap
+            ? [...paneMap.values()].filter(pane => (this as any).viewRefs?.has(pane))
+            : []
+        if (panes.length === 0) {
+            this.recovering = false
+            this.cdr.detectChanges()
+            return
+        }
+
+        try {
+            await Promise.all(panes.map(pane => pane.waitForRecovery()))
+        } catch (e) {
+            this.recoveryError = 'Failed to restore tmux window. Input remains disabled.'
+            this.logger.warn(`Failed to finish restoring window @${windowId}`, e)
+            this.cdr.detectChanges()
+            return
+        }
+        if (generation !== this.recoveryGeneration || windowId !== this.windowId) {
+            return
+        }
+
+        panes.forEach(pane => pane.enableInput())
+        this.recovering = false
+        this.cdr.detectChanges()
+
+        if (this.hasFocus) {
+            this.restoreKeyboardFocus()
+        }
     }
 
     /**
@@ -938,6 +1007,17 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         this.updateDividers(displayTree)
 
         this.cdr.detectChanges()
+
+        // A zoom-hidden pane starts recovery only after it is attached. Gate
+        // this window again at that point, rather than waiting for hidden panes
+        // during the initial recovery and deadlocking the overlay.
+        const activePaneMap = this.windowPaneTabs.get(this.windowId)
+        const visiblePanes = activePaneMap
+            ? [...activePaneMap.values()].filter(pane => (this as any).viewRefs?.has(pane))
+            : []
+        if (this.recovering || visiblePanes.some(pane => !pane.isRecovered())) {
+            void this.completeRecovery(this.windowId)
+        }
     }
 
     /**
@@ -1077,15 +1157,17 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     /**
      * Measure the whole-window character grid from the .pane-area container.
      *
-     * Pure pixel-to-cell conversion. Uses clientWidth/clientHeight to
-     * exclude padding from the measurement — pane-area padding is purely
-     * cosmetic and must not affect the tmux grid calculation.
+     * Pure pixel-to-cell conversion. clientWidth/clientHeight include CSS
+     * padding, so subtract it explicitly. The padding is cosmetic and must
+     * not be converted into an extra tmux row/column.
      */
     private measureClientSize(): { cols: number; rows: number } | null {
         const host = this.hostElement.nativeElement as HTMLElement
         const paneArea = host.querySelector('.pane-area') ?? host
-        const pw = (paneArea as HTMLElement).clientWidth
-        const ph = (paneArea as HTMLElement).clientHeight
+        const paneAreaElement = paneArea as HTMLElement
+        const style = getComputedStyle(paneAreaElement)
+        const pw = paneAreaElement.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+        const ph = paneAreaElement.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
         if (pw < 10 || ph < 10) return null
 
         const cell = this.getCellSize()

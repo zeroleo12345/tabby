@@ -54,6 +54,8 @@ export class TmuxPaneSession extends BaseSession {
      * multiple feedOutput calls.  Buffered until the closing ST arrives.
      */
     private _pendingTitleSeq: Buffer | null = null
+    /** Input stays disabled until the UI has restored this pane's snapshot. */
+    private inputEnabled = false
 
     constructor (
         logger: Logger,
@@ -88,7 +90,14 @@ export class TmuxPaneSession extends BaseSession {
     }
 
     write (data: Buffer): void {
+        if (!this.inputEnabled) {
+            return
+        }
         this.controller.writeToPane(this.paneId, data)
+    }
+
+    enableInput (): void {
+        this.inputEnabled = true
     }
 
     // NOTE: feedFromTerminal is NOT overridden — it goes through the
@@ -241,9 +250,17 @@ export class TmuxController {
     private paneSessions = new Map<number, TmuxPaneSession>()
     private windowStates = new Map<number, WindowState>()
     private knownPanes = new Set<number>()
-    private pendingPaneOutput = new Map<number, Buffer[]>()
+    private pendingPaneOutput = new Map<number, Array<{ sequence: number; data: Buffer }>>()
+    private outputSequence = 0
     /** Pre-loaded history from batch discovery (iTerm2-style). */
     private pendingSnapshots = new Map<number, PaneSnapshot>()
+    /**
+     * Only one discovery may run at a time.  session-changed, initialized and
+     * window-add can all arrive during initial attach; running their scans in
+     * parallel makes capture-pane responses and pane registration race.
+     */
+    private discoveryPromise: Promise<void> | null = null
+    private discoveryPending = false
     private sessionName = ''
     private sessionId = -1
     private attached = false
@@ -273,15 +290,21 @@ export class TmuxController {
         // Handle pane output
         this.gateway.output$.subscribe(({ paneId, data }) => {
             this.log.info(`Session received output for pane %${paneId}: ${data.length} bytes`)
+            const sequence = ++this.outputSequence
 
-            if (this.paneSessions.has(paneId)) {
+            // A capture-pane snapshot is a point-in-time view.  Until it has
+            // been restored, output received afterwards must stay buffered so
+            // it can be replayed after the snapshot.  Sending it straight to
+            // xterm here lets the subsequent restore overwrite its visual
+            // state; dropping it loses it entirely.
+            if (this.paneSessions.has(paneId) && !this.pendingSnapshots.has(paneId)) {
                 this.paneSessions.get(paneId)!.feedOutput(data)
             } else {
                 // Buffer output for panes not yet registered
                 if (!this.pendingPaneOutput.has(paneId)) {
                     this.pendingPaneOutput.set(paneId, [])
                 }
-                this.pendingPaneOutput.get(paneId)!.push(data)
+                this.pendingPaneOutput.get(paneId)!.push({ sequence, data })
             }
         })
 
@@ -440,6 +463,24 @@ export class TmuxController {
      * is needed at the session level.
      */
     private async discoverWindowsAndPanes (): Promise<void> {
+        if (this.discoveryPromise) {
+            this.discoveryPending = true
+            return this.discoveryPromise
+        }
+
+        this.discoveryPromise = (async () => {
+            do {
+                this.discoveryPending = false
+                await this.discoverWindowsAndPanesInternal()
+            } while (this.discoveryPending)
+        })().finally(() => {
+            this.discoveryPromise = null
+        })
+        return this.discoveryPromise
+    }
+
+    /** Perform one serialized discovery pass. */
+    private async discoverWindowsAndPanesInternal (): Promise<void> {
         this.log.info('Batch discovering windows and panes...')
         try {
             // Step 1: Discover all windows with names, layout and active flag
@@ -671,11 +712,12 @@ export class TmuxController {
 
         const captures = paneIds.map(async ({ paneId }) => {
             try {
-                const [history, altHistory, stateResult] = await Promise.all([
-                    this.gateway.sendCommand(
+                const historyResult = this.gateway.sendCommand(
                         `capture-pane -peqJN -S- -t %${paneId}`,
                         TMUX_COMMAND_TOLERATE_ERRORS
-                    ),
+                    ).then(history => ({ history, outputSequence: this.outputSequence }))
+                const [primary, altHistory, stateResult] = await Promise.all([
+                    historyResult,
                     this.gateway.sendCommand(
                         `capture-pane -peqJN -a -S- -t %${paneId}`,
                         TMUX_COMMAND_TOLERATE_ERRORS
@@ -686,7 +728,23 @@ export class TmuxController {
                     ),
                 ])
                 const state = this.parsePaneState(stateResult, paneId)
-                this.pendingSnapshots.set(paneId, { history, altHistory, state })
+                this.pendingSnapshots.set(paneId, {
+                    history: primary.history,
+                    altHistory,
+                    state,
+                })
+                // Output received up to the end of capture-pane's response is
+                // represented by the captured screen.  Only keep the suffix
+                // that arrived afterwards for replay during restore.
+                const buffered = this.pendingPaneOutput.get(paneId)
+                if (buffered) {
+                    const pending = buffered.filter(x => x.sequence > primary.outputSequence)
+                    if (pending.length) {
+                        this.pendingPaneOutput.set(paneId, pending)
+                    } else {
+                        this.pendingPaneOutput.delete(paneId)
+                    }
+                }
             } catch (e) {
                 this.logger.warn(`Failed to capture snapshot for pane %${paneId}:`, e)
             }
@@ -713,23 +771,16 @@ export class TmuxController {
         this.paneSessions.set(paneId, session)
         this.knownPanes.add(paneId)
 
-        // If a snapshot exists, the pending output is redundant — the snapshot
-        // already contains the same content (and more). Discard it to avoid
-        // writing the prompt/scrollback twice (once from buffered %output,
-        // once from capture-pane history in restorePaneHistory).
+        // A snapshot is restored immediately after registration. Keep output
+        // buffered until that restore finishes: it may have arrived after the
+        // capture-pane command and therefore not be represented in the
+        // snapshot.
         if (this.pendingSnapshots.has(paneId)) {
-            this.pendingPaneOutput.delete(paneId)
             return
         }
 
         // No snapshot (shouldn't happen normally) — flush buffered output
-        const buffered = this.pendingPaneOutput.get(paneId)
-        if (buffered) {
-            for (const data of buffered) {
-                session.feedOutput(data)
-            }
-            this.pendingPaneOutput.delete(paneId)
-        }
+        this.flushPendingPaneOutput(paneId, session)
     }
 
     unregisterPane (paneId: number): void {
@@ -781,11 +832,10 @@ export class TmuxController {
             this.logger.warn(`No pre-loaded snapshot for pane %${paneId}, skipping`)
             return
         }
-        this.pendingSnapshots.delete(paneId)
-
         const session = this.paneSessions.get(paneId)
         if (!session) return
 
+        this.pendingSnapshots.delete(paneId)
         const state = snapshot.state
 
         // Step 1: Write primary screen history to the primary screen.
@@ -844,6 +894,23 @@ export class TmuxController {
             // Apply terminal state (cursor, scroll region, modes)
             this.applyPaneState(session, state)
         }
+
+        // Replay output that arrived after capture-pane completed but before
+        // this pane was ready.  Previously registerPane() discarded it merely
+        // because a snapshot existed, which caused intermittently incomplete
+        // panes after attach.
+        this.flushPendingPaneOutput(paneId, session)
+    }
+
+    private flushPendingPaneOutput (paneId: number, session: TmuxPaneSession): void {
+        const buffered = this.pendingPaneOutput.get(paneId)
+        if (!buffered) {
+            return
+        }
+        for (const { data } of buffered) {
+            session.feedOutput(data)
+        }
+        this.pendingPaneOutput.delete(paneId)
     }
 
     /**

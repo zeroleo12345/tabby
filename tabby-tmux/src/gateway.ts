@@ -99,6 +99,7 @@ export class TmuxGateway {
             throw new Error('Gateway disconnected')
         }
 
+        let commandId = 0
         const original = new Promise<string>((resolve, reject) => {
             const cmd: PendingCommand = {
                 id: this.nextCommandId++,
@@ -108,6 +109,7 @@ export class TmuxGateway {
                 flags,
                 timestamp: Date.now()
             }
+            commandId = cmd.id
             this.commandQueue.push(cmd)
             this.write(command + '\r')
             this.log.debug(`Sent command: ${command}`)
@@ -117,9 +119,16 @@ export class TmuxGateway {
         let timer: ReturnType<typeof setTimeout>
         const timeout = new Promise<string>((_, reject) => {
             timer = setTimeout(() => {
-                // Remove the timed-out command from the queue so it won't
-                // consume a later response and cause command-id mismatch.
-                reject(new Error(`Command timed out after ${this.commandTimeoutMs}ms: ${command}`))
+                const error = new Error(`Command timed out after ${this.commandTimeoutMs}ms: ${command}`)
+                // A timed-out queued command must not consume the next
+                // response block.  Keeping it in commandQueue shifts every
+                // subsequent capture-pane response and yields corrupt or
+                // incomplete pane snapshots.
+                const index = this.commandQueue.findIndex(x => x.id === commandId)
+                if (index !== -1) {
+                    this.commandQueue.splice(index, 1)
+                }
+                reject(error)
             }, this.commandTimeoutMs)
         })
 
