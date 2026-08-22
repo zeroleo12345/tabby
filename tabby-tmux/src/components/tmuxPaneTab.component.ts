@@ -40,6 +40,14 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
     private _tmuxRows = 0
     /** Whether the xterm frontend has been attached and is ready. */
     private _frontendReady = false
+    private paneSession: TmuxPaneSession | null = null
+    private recovered = false
+    private resolveRecovery!: () => void
+    private rejectRecovery!: (reason?: unknown) => void
+    private recoveryComplete = new Promise<void>((resolve, reject) => {
+        this.resolveRecovery = resolve
+        this.rejectRecovery = reject
+    })
 
     constructor (injector: Injector) {
         super(injector)
@@ -80,7 +88,10 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
         // so the frontend is attached before history restore begins. This means
         // history output goes directly to the terminal, not into a buffer that
         // gets flushed in a bulk dump.
-        this.initializeSession()
+        this.initializeSession().catch(e => {
+            this.logger.warn(`Failed to restore pane %${this.paneId}`, e)
+            this.rejectRecovery(e)
+        })
 
         // tmux owns the cell grid. Once the frontend is ready, neutralize
         // xterm's automatic fit-to-container so the pane never overrides the
@@ -156,6 +167,11 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
 
         // Create the pane session
         const paneSession = new TmuxPaneSession(this.logger, this.controller, this.paneId)
+        this.paneSession = paneSession
+
+        const frontendReady = new Promise<void>(resolve => {
+            this.frontendReady$.pipe(first()).subscribe(() => resolve())
+        })
 
         // Set up the terminal session first so the frontend is wired.
         // This binds session.output$ → this.write() and frontend → session.
@@ -163,7 +179,27 @@ export class TmuxPaneTabComponent extends BaseTerminalTabComponent<any> implemen
 
         // Start the session (restores history) non-blocking.
         // History is written to the terminal via emitOutput → write().
-        paneSession.start()
+        await Promise.all([paneSession.start(), frontendReady])
+
+        // Wait for the queued xterm writes (history + post-snapshot output) to
+        // reach the renderer before allowing the parent window to enable input.
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+        this.recovered = true
+        this.resolveRecovery()
+    }
+
+    /** Resolves once this pane's snapshot and buffered output are rendered. */
+    waitForRecovery (): Promise<void> {
+        return this.recoveryComplete
+    }
+
+    isRecovered (): boolean {
+        return this.recovered
+    }
+
+    /** Called by the owning TmuxSessionTab after every pane is recovered. */
+    enableInput (): void {
+        this.paneSession?.enableInput()
     }
 
     /**

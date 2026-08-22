@@ -54,6 +54,8 @@ export class TmuxPaneSession extends BaseSession {
      * multiple feedOutput calls.  Buffered until the closing ST arrives.
      */
     private _pendingTitleSeq: Buffer | null = null
+    /** Input stays disabled until the UI has restored this pane's snapshot. */
+    private inputEnabled = false
 
     constructor (
         logger: Logger,
@@ -88,7 +90,14 @@ export class TmuxPaneSession extends BaseSession {
     }
 
     write (data: Buffer): void {
+        if (!this.inputEnabled) {
+            return
+        }
         this.controller.writeToPane(this.paneId, data)
+    }
+
+    enableInput (): void {
+        this.inputEnabled = true
     }
 
     // NOTE: feedFromTerminal is NOT overridden — it goes through the

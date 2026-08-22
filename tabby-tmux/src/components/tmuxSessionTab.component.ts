@@ -58,6 +58,10 @@ export interface TmuxSessionProfile {
         ></tmux-window-bar>
         <div class="pane-area" #paneAreaEl>
             <ng-container #vc></ng-container>
+            <div class="recovery-overlay" *ngIf="recovering">
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                {{ recoveryError || 'Restoring tmux window…' }}
+            </div>
         </div>
     `,
     styles: [`
@@ -97,6 +101,17 @@ export interface TmuxSessionProfile {
         ::ng-deep .pane-area > .child {
             position: absolute;
             box-sizing: border-box;
+        }
+        .recovery-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.35);
+            pointer-events: all;
+            user-select: none;
         }
         /* Independent divider elements for pane boundaries + resize dragging.
            Width/height is set inline to 1 cell to match tmux's 1-char separator.
@@ -164,6 +179,10 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     private _lastSentCols = 0
     private _lastSentRows = 0
     private _focusSubscription: Subscription | null = null
+    /** Keep input blocked until every pane in this native window is restored. */
+    recovering = true
+    recoveryError: string | null = null
+    private recoveryGeneration = 0
 
     /** Active divider DOM elements for the current window layout */
     private _dividerElements: HTMLElement[] = []
@@ -561,6 +580,52 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
                 this.refreshClientSize()
             })
         }
+
+        void this.completeRecovery(windowId)
+    }
+
+    /**
+     * Do not let a partially restored xterm receive user input. Snapshot
+     * restoration is point-in-time; after all panes render their snapshot and
+     * buffered output, input is enabled together for this window.
+     */
+    private async completeRecovery (windowId: number): Promise<void> {
+        const generation = ++this.recoveryGeneration
+        this.recovering = true
+        this.recoveryError = null
+        this.cdr.detectChanges()
+
+        const paneMap = this.windowPaneTabs.get(windowId)
+        // Zoom-hidden panes have no mounted xterm and therefore cannot finish
+        // recovery yet. They are gated separately when they become visible.
+        const panes = paneMap
+            ? [...paneMap.values()].filter(pane => (this as any).viewRefs?.has(pane))
+            : []
+        if (panes.length === 0) {
+            this.recovering = false
+            this.cdr.detectChanges()
+            return
+        }
+
+        try {
+            await Promise.all(panes.map(pane => pane.waitForRecovery()))
+        } catch (e) {
+            this.recoveryError = 'Failed to restore tmux window. Input remains disabled.'
+            this.logger.warn(`Failed to finish restoring window @${windowId}`, e)
+            this.cdr.detectChanges()
+            return
+        }
+        if (generation !== this.recoveryGeneration || windowId !== this.windowId) {
+            return
+        }
+
+        panes.forEach(pane => pane.enableInput())
+        this.recovering = false
+        this.cdr.detectChanges()
+
+        if (this.hasFocus) {
+            this.restoreKeyboardFocus()
+        }
     }
 
     /**
@@ -942,6 +1007,17 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         this.updateDividers(displayTree)
 
         this.cdr.detectChanges()
+
+        // A zoom-hidden pane starts recovery only after it is attached. Gate
+        // this window again at that point, rather than waiting for hidden panes
+        // during the initial recovery and deadlocking the overlay.
+        const activePaneMap = this.windowPaneTabs.get(this.windowId)
+        const visiblePanes = activePaneMap
+            ? [...activePaneMap.values()].filter(pane => (this as any).viewRefs?.has(pane))
+            : []
+        if (this.recovering || visiblePanes.some(pane => !pane.isRecovered())) {
+            void this.completeRecovery(this.windowId)
+        }
     }
 
     /**
