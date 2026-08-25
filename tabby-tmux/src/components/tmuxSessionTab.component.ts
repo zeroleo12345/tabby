@@ -1,7 +1,7 @@
 import { Component, Injector, Input, OnInit, OnDestroy, ChangeDetectorRef, ElementRef } from '@angular/core'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
 import { Subscription } from 'rxjs'
-import { SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
+import { AppService, SplitTabComponent, SplitContainer, LogService, Logger, TabsService, HotkeysService, GetRecoveryTokenOptions, RecoveryToken, ConfigService } from 'tabby-core'
 import { TabRecoveryService } from 'tabby-core'
 import { BaseTerminalTabComponent, TerminalColorScheme } from 'tabby-terminal'
 import { TmuxController } from '../session'
@@ -179,6 +179,16 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     private _lastSentCols = 0
     private _lastSentRows = 0
     private _focusSubscription: Subscription | null = null
+    private appService: AppService
+    private recoveryInputBlocker = (event: Event) => {
+        // The hidden SSH/control-mode host may still own document.activeElement
+        // while a native tmux tab is being mounted. Block at capture phase so
+        // Enter or paste cannot reach that host and terminate control mode.
+        if (this.recovering && this.appService.activeTab === this) {
+            event.preventDefault()
+            event.stopImmediatePropagation()
+        }
+    }
     /** Keep input blocked until every pane in this native window is restored. */
     recovering = true
     recoveryError: string | null = null
@@ -230,6 +240,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         // at module top-level makes Angular's constructor metadata read it before
         // the service class is initialized.
         this.tmuxService = injector.get(require('../services/tmux.service').TmuxService)
+        this.appService = injector.get(AppService)
         this._tabsService = tabsService
         this._ngbModal = injector.get(NgbModal)
         this.logger = log.create('tmux-session')
@@ -247,6 +258,10 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         this.sessionName = this.controller.getSessionName() || this.profile.sessionName || 'default'
         this.activeWindowId = this.windowId
         this.updateTmuxTitle()
+
+        for (const eventName of ['keydown', 'keypress', 'beforeinput', 'paste', 'compositionstart']) {
+            document.addEventListener(eventName, this.recoveryInputBlocker, true)
+        }
 
         this._focusSubscription = this.focused$.subscribe(() => {
             // SplitTab's normal focus propagation is not sufficient here. Tmux
@@ -619,11 +634,25 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
             return
         }
 
+        // Make the tmux server, native Tabby selection, and browser xterm
+        // focus agree before accepting the first user keystroke. This prevents
+        // a recently hidden SSH host or the last tmux tab from receiving it.
+        if (this.appService.activeTab === this && this.controller?.getActiveWindowId() !== this.windowId) {
+            try {
+                await this.controller?.selectWindow(this.windowId)
+            } catch (e) {
+                this.logger.warn(`Failed to activate tmux window @${this.windowId} after recovery`, e)
+            }
+        }
+        if (generation !== this.recoveryGeneration) {
+            return
+        }
+
         panes.forEach(pane => pane.enableInput())
         this.recovering = false
         this.cdr.detectChanges()
 
-        if (this.hasFocus) {
+        if (this.appService.activeTab === this) {
             this.restoreKeyboardFocus()
         }
     }
@@ -696,6 +725,12 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         }
 
         this.focus(pane)
+
+        // XTermFrontend.focus() intentionally defers focus with setTimeout.
+        // For a top-level tab switch that leaves one event-loop turn where the
+        // hidden SSH host is still active, claim xterm's textarea immediately
+        // as well; keep the deferred call below as a renderer-ready fallback.
+        ;(pane.frontend as any)?.xterm?.focus()
 
         // BaseTerminalTabComponent focuses xterm asynchronously. Repeat the
         // native focus after the tab switch has been rendered, but only if this
@@ -1487,6 +1522,9 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     }
 
     override ngOnDestroy(): void {
+        for (const eventName of ['keydown', 'keypress', 'beforeinput', 'paste', 'compositionstart']) {
+            document.removeEventListener(eventName, this.recoveryInputBlocker, true)
+        }
         if (this.eventSubscription) {
             this.eventSubscription.unsubscribe()
         }
