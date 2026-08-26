@@ -317,7 +317,7 @@ export class Application {
                     {
                         label: 'Website',
                         click () {
-                            shell.openExternal('https://eugeny.github.io/tabby')
+                            shell.openExternal('https://zeroleo12345.github.io/tabby')
                         },
                     },
                 ],
