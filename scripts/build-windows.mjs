@@ -21,10 +21,6 @@ builder({
         },
         publish: process.env.KEYGEN_TOKEN ? [
             vars.keygenConfig,
-            {
-                provider: 'github',
-                channel: `latest-${process.env.ARCH}`,
-            },
         ] : undefined,
         forceCodeSigning: !!keypair,
         win: {
