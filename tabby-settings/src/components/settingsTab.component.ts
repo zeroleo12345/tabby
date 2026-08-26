@@ -14,6 +14,7 @@ import {
     HostWindowService,
     AppService,
     LocaleService,
+    NotificationsService,
     TranslateService,
     HotkeysService,
 } from 'tabby-core'
@@ -50,14 +51,15 @@ export class SettingsTabComponent extends BaseTabComponent {
         public platform: PlatformService,
         public locale: LocaleService,
         public updater: UpdaterService,
+        private notifications: NotificationsService,
         private app: AppService,
         private hotkeys: HotkeysService,
         @Inject(SettingsTabProvider) public settingsProviders: SettingsTabProvider[],
-        translate: TranslateService,
+        private translate: TranslateService,
         injector: Injector,
     ) {
         super(injector)
-        this.setTitle(translate.instant(_('Settings')))
+        this.setTitle(this.translate.instant(_('Settings')))
         this.settingsProviders = config.enabledServices(this.settingsProviders)
         this.settingsProviders = this.settingsProviders.filter(x => !!x.getComponentType())
         this.settingsProviders.sort((a, b) => a.weight - b.weight + a.title.localeCompare(b.title))
@@ -137,8 +139,16 @@ export class SettingsTabComponent extends BaseTabComponent {
 
     async checkForUpdates () {
         this.checkingForUpdate = true
-        this.updateAvailable = await this.updater.check()
-        this.checkingForUpdate = false
+        try {
+            this.updateAvailable = await this.updater.check()
+        } catch (error) {
+            this.notifications.error(
+                this.translate.instant(_('Unable to check for updates. Please try again later.')),
+                error instanceof Error ? error.message : String(error),
+            )
+        } finally {
+            this.checkingForUpdate = false
+        }
     }
 
     showReleaseNotes () {
