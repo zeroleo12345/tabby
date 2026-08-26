@@ -34,10 +34,6 @@ builder({
         npmRebuild: process.env.ARCH !== 'arm64',
         publish: process.env.KEYGEN_TOKEN ? [
             vars.keygenConfig,
-            {
-                provider: 'github',
-                channel: `latest-${process.env.ARCH}`,
-            },
         ] : undefined,
         afterSign: async (context) => {
           const appPath = context.appOutDir + '/Tabby.app'

@@ -4,7 +4,8 @@ import axios from 'axios'
 import { Logger, LogService, ConfigService, UpdaterService, PlatformService, TranslateService } from 'tabby-core'
 import { ElectronService } from '../services/electron.service'
 
-const UPDATES_URL = 'https://api.github.com/repos/eugeny/tabby/releases/latest'
+const UPDATES_URL = 'https://api.github.com/repos/zeroleo12345/tabby/releases/latest'
+const UPDATE_CHECK_TIMEOUT = 10_000
 
 @Injectable()
 export class ElectronUpdaterService extends UpdaterService {
@@ -61,24 +62,38 @@ export class ElectronUpdaterService extends UpdaterService {
     async check (): Promise<boolean> {
         if (this.electronUpdaterAvailable) {
             return new Promise((resolve, reject) => {
-                // eslint-disable-next-line @typescript-eslint/init-declarations, prefer-const
-                let cancel
-                const onNoUpdate = () => {
-                    cancel()
-                    resolve(false)
-                }
-                const onUpdate = () => {
-                    cancel()
-                    resolve(this.downloaded)
-                }
-                const onError = (err) => {
-                    cancel()
-                    reject(err)
-                }
-                cancel = () => {
+                let settled = false
+                const timeout = setTimeout(() => {
+                    this.electronUpdaterAvailable = false
+                    finish(() => reject(new Error('Timed out while checking for updates')))
+                }, UPDATE_CHECK_TIMEOUT)
+
+                const cancel = () => {
                     this.electron.ipcRenderer.off('updater:error', onError)
                     this.electron.ipcRenderer.off('updater:update-not-available', onNoUpdate)
                     this.electron.ipcRenderer.off('updater:update-available', onUpdate)
+                }
+                const finish = (callback: () => void) => {
+                    if (settled) {
+                        return
+                    }
+                    settled = true
+                    clearTimeout(timeout)
+                    cancel()
+                    callback()
+                }
+                const onNoUpdate = () => {
+                    finish(() => resolve(false))
+                }
+                const onUpdate = () => {
+                    // A new version being found must finish this check immediately.
+                    // Waiting for its download makes the button spin forever if the
+                    // package download stalls.
+                    finish(() => resolve(true))
+                }
+                const onError = (err) => {
+                    this.electronUpdaterAvailable = false
+                    finish(() => reject(err))
                 }
                 this.electron.ipcRenderer.on('updater:error', onError)
                 this.electron.ipcRenderer.on('updater:update-not-available', onNoUpdate)
@@ -88,20 +103,12 @@ export class ElectronUpdaterService extends UpdaterService {
                 } catch (e) {
                     this.electronUpdaterAvailable = false
                     this.logger.info('Electron updater unavailable, falling back', e)
+                    finish(() => reject(e))
                 }
             })
-
-            this.electron.ipcRenderer.on('updater:update-available', () => {
-                this.logger.info('Update available')
-            })
-
-            this.electron.ipcRenderer.once('updater:update-not-available', () => {
-                this.logger.info('No updates')
-            })
-
         } else {
             this.logger.debug('Checking for updates through fallback method.')
-            const response = await axios.get(UPDATES_URL)
+            const response = await axios.get(UPDATES_URL, { timeout: UPDATE_CHECK_TIMEOUT })
             const data = response.data
             const version = data.tag_name.substring(1)
             if (this.electron.app.getVersion() !== version) {
