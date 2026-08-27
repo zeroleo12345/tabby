@@ -347,14 +347,18 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.contextMenuProviders.sort((a, b) => a.weight - b.weight)
     }
 
-    /**
-     * Use the native xterm focus as a fallback while a tab switch is settling.
-     * Tmux keeps all pane components initialized (and therefore hasFocus=true),
-     * so its explicit active-pane marker must still take precedence.
-     */
+    /** Whether this is the terminal selected by Tabby's active tab/pane tree. */
     isHotkeyTarget (): boolean {
         const tmuxActive = (this as { _tmuxActive?: boolean })._tmuxActive
-        return tmuxActive !== false && (this.hasFocus || this.frontend?.hasFocus() === true)
+        if (tmuxActive === false) {
+            return false
+        }
+
+        let activeTab = this.app.activeTab
+        while (activeTab instanceof SplitTabComponent) {
+            activeTab = activeTab.getFocusedTab()
+        }
+        return activeTab === this
     }
 
     /** @hidden */
