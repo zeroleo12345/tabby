@@ -213,7 +213,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.setTitle(this.translate.instant('Terminal'))
 
         this.subscribeUntilDestroyed(this.hotkeys.unfilteredHotkey$, async hotkey => {
-            if (!this.hasFocus) {
+            if (!this.isHotkeyTarget()) {
                 return
             }
             if (hotkey === 'search') {
@@ -345,6 +345,16 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.bellPlayer.load()
 
         this.contextMenuProviders.sort((a, b) => a.weight - b.weight)
+    }
+
+    /**
+     * Use the native xterm focus as a fallback while a tab switch is settling.
+     * Tmux keeps all pane components initialized (and therefore hasFocus=true),
+     * so its explicit active-pane marker must still take precedence.
+     */
+    private isHotkeyTarget (): boolean {
+        const tmuxActive = (this as { _tmuxActive?: boolean })._tmuxActive
+        return tmuxActive !== false && (this.hasFocus || this.frontend?.hasFocus() === true)
     }
 
     /** @hidden */

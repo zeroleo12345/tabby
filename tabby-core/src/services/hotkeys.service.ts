@@ -62,7 +62,13 @@ export class HotkeysService {
     private hotkeyDescriptions: HotkeyDescription[] = []
     private hotkeyConfig: Record<string, any> = {}
 
-    private lastEventTimestamp = 0
+    /**
+     * xterm forwards the same native keyboard event through its custom handler
+     * and the event can then bubble to our window listener. Dedupe by event
+     * identity: timestamps are not event IDs and macOS can reuse them for
+     * consecutive Option-modified key events.
+     */
+    private handledEvents = new WeakSet<KeyboardEvent>()
 
     private constructor (
         private zone: NgZone,
@@ -129,10 +135,10 @@ export class HotkeysService {
      * @return true : preventDefault();
      */
     isHotkeyEvent (eventName: string, nativeEvent: KeyboardEvent): boolean {
-        if (nativeEvent.timeStamp === this.lastEventTimestamp) {
+        if (this.handledEvents.has(nativeEvent)) {
             return false
         }
-        this.lastEventTimestamp = nativeEvent.timeStamp
+        this.handledEvents.add(nativeEvent)
 
         // let keyTips = `111 eventName: ${eventName}, code: ${nativeEvent.code}`
         // keyTips += nativeEvent.ctrlKey ? ', ctrlKey: true' : ''
