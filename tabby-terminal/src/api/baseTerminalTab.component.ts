@@ -213,7 +213,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.setTitle(this.translate.instant('Terminal'))
 
         this.subscribeUntilDestroyed(this.hotkeys.unfilteredHotkey$, async hotkey => {
-            if (!this.hasFocus) {
+            if (!this.isHotkeyTarget()) {
                 return
             }
             if (hotkey === 'search') {
@@ -345,6 +345,20 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
         this.bellPlayer.load()
 
         this.contextMenuProviders.sort((a, b) => a.weight - b.weight)
+    }
+
+    /** Whether this is the terminal selected by Tabby's active tab/pane tree. */
+    isHotkeyTarget (): boolean {
+        const tmuxActive = (this as { _tmuxActive?: boolean })._tmuxActive
+        if (tmuxActive === false) {
+            return false
+        }
+
+        let activeTab = this.app.activeTab
+        while (activeTab instanceof SplitTabComponent) {
+            activeTab = activeTab.getFocusedTab()
+        }
+        return activeTab === this
     }
 
     /** @hidden */
