@@ -352,7 +352,7 @@ export class BaseTerminalTabComponent<P extends BaseTerminalProfile> extends Bas
      * Tmux keeps all pane components initialized (and therefore hasFocus=true),
      * so its explicit active-pane marker must still take precedence.
      */
-    private isHotkeyTarget (): boolean {
+    isHotkeyTarget (): boolean {
         const tmuxActive = (this as { _tmuxActive?: boolean })._tmuxActive
         return tmuxActive !== false && (this.hasFocus || this.frontend?.hasFocus() === true)
     }
