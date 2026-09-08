@@ -1157,6 +1157,17 @@ export class TmuxController {
         await this.gateway.sendCommand(`select-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
     }
 
+    /** Swap two windows' indexes in this tmux session using stable window IDs. */
+    async swapWindows (sourceWindowId: number, targetWindowId: number): Promise<void> {
+        if (sourceWindowId === targetWindowId) {
+            return
+        }
+        await this.gateway.sendCommand(
+            `swap-window -s @${sourceWindowId} -t @${targetWindowId}`,
+            TMUX_COMMAND_TOLERATE_ERRORS
+        )
+    }
+
     async renameWindow (windowId: number, name: string): Promise<void> {
         await this.gateway.sendCommand(
             `rename-window -t @${windowId} "${this.escapeTmuxString(name)}"`,
