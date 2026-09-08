@@ -207,6 +207,27 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
         return context ? [...context.sessionTabs.keys()] : [this.windowId]
     }
 
+    /**
+     * Synchronize a Tabby tab-position swap with tmux's window indexes.
+     * Window IDs are server-global, so only windows using the same controller
+     * may be swapped; this prevents accidental cross-session moves.
+     */
+    async swapWindowWith (other: TmuxSessionTabComponent): Promise<boolean> {
+        const controller = this.controller ?? this.existingController
+        const otherController = other.controller ?? other.existingController
+        if (!controller || controller !== otherController) {
+            return false
+        }
+
+        try {
+            await controller.swapWindows(this.windowId, other.windowId)
+            return true
+        } catch (e) {
+            this.logger.warn(`Failed to swap tmux windows @${this.windowId} and @${other.windowId}:`, e)
+            return false
+        }
+    }
+
     /** The hidden source terminal still owns the SSH/local connection. */
     get hostTerminalTab (): BaseTerminalTabComponent<any> | null {
         return this.tmuxService.findContextForTab(this)?.terminalTab ?? null

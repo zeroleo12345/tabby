@@ -77,6 +77,17 @@ export class AppRootComponent {
     activeTransfers: FileTransfer[] = []
     private logger: Logger
 
+    /**
+     * Structural typing keeps tabby-core independent of the optional tmux
+     * plugin. TmuxSessionTabComponent provides this runtime capability.
+     */
+    private isTmuxWindowTab (tab: BaseTabComponent): tab is BaseTabComponent & {
+        isTmuxSessionTab: true
+        swapWindowWith: (other: BaseTabComponent) => Promise<boolean>
+    } {
+        return (tab as any)?.isTmuxSessionTab === true && typeof (tab as any).swapWindowWith === 'function'
+    }
+
     constructor (
         private hotkeys: HotkeysService,
         private commands: CommandService,
@@ -115,10 +126,10 @@ export class AppRootComponent {
                     this.app.previousTab()
                 }
                 if (hotkey === 'move-tab-left') {
-                    this.app.moveSelectedTabLeft()
+                    void this.moveSelectedTab(-1)
                 }
                 if (hotkey === 'move-tab-right') {
-                    this.app.moveSelectedTabRight()
+                    void this.moveSelectedTab(1)
                 }
                 if (hotkey === 'duplicate-tab') {
                     if ((this.app.activeTab as any)?.isTmuxSessionTab) {
@@ -221,7 +232,7 @@ export class AppRootComponent {
         return this.config.store.appearance.flexTabs ? '*' : '200px'
     }
 
-    onTabsReordered (event: CdkDragDrop<BaseTabComponent[]>) {
+    async onTabsReordered (event: CdkDragDrop<BaseTabComponent[]>) {
         const tab: BaseTabComponent = event.item.data
         if (!this.app.tabs.includes(tab)) {
             if (tab.parent instanceof SplitTabComponent) {
@@ -229,8 +240,56 @@ export class AppRootComponent {
                 this.app.wrapAndAddTab(tab)
             }
         }
+
+        if (event.previousIndex === event.currentIndex) {
+            return
+        }
+
+        const target = this.app.tabs[event.currentIndex]
+        if (this.isTmuxWindowTab(tab) && this.isTmuxWindowTab(target)) {
+            // tmux swap-window exchanges two indexes, rather than inserting a
+            // window at an index. Mirror that exact operation in the tab bar.
+            if (!await tab.swapWindowWith(target)) {
+                return
+            }
+            this.app.tabs[event.previousIndex] = target
+            this.app.tabs[event.currentIndex] = tab
+            this.app.emitTabsChanged()
+            return
+        }
+
         moveItemInArray(this.app.tabs, event.previousIndex, event.currentIndex)
         this.app.emitTabsChanged()
+    }
+
+    private async moveSelectedTab (direction: -1 | 1): Promise<void> {
+        const tab = this.app.activeTab
+        if (!tab) {
+            return
+        }
+
+        const sourceIndex = this.app.tabs.indexOf(tab)
+        const requestedTargetIndex = sourceIndex + direction
+        const canCycle = this.config.store.appearance.cycleTabs
+        const targetIndex = requestedTargetIndex < 0
+            ? canCycle ? this.app.tabs.length - 1 : -1
+            : requestedTargetIndex >= this.app.tabs.length ? canCycle ? 0 : -1 : requestedTargetIndex
+        const target = targetIndex === -1 ? undefined : this.app.tabs[targetIndex]
+
+        if (target && this.isTmuxWindowTab(tab) && this.isTmuxWindowTab(target)) {
+            if (await tab.swapWindowWith(target)) {
+                this.app.tabs[sourceIndex] = target
+                this.app.tabs[targetIndex] = tab
+                this.app.emitTabsChanged()
+            }
+            return
+        }
+
+        if (direction === -1) {
+            this.app.moveSelectedTabLeft()
+        } else {
+            this.app.moveSelectedTabRight()
+        }
     }
 
     onTransfersChange () {
