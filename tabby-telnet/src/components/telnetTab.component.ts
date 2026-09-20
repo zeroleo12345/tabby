@@ -64,10 +64,12 @@ export class TelnetTabComponent extends ConnectableTerminalTabComponent<TelnetPr
             } catch (e) {
                 this.stopSpinner()
                 this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
+                this.offerReconnection()
                 return
             }
         } catch (e) {
             this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
+            this.offerReconnection()
         }
     }
 
