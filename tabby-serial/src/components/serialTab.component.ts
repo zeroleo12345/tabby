@@ -66,6 +66,7 @@ export class SerialTabComponent extends ConnectableTerminalTabComponent<SerialPr
         } catch (e) {
             this.stopSpinner()
             this.write(colors.black.bgRed(' X ') + ' ' + colors.red(e.message) + '\r\n')
+            this.offerReconnection()
             return
         }
         this.session!.resize(this.size.columns, this.size.rows)
