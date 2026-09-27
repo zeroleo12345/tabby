@@ -265,6 +265,14 @@ export class TmuxController {
     private sessionId = -1
     private attached = false
     private activeWindowId: number | null = null
+    /**
+     * Window selected locally but not yet acknowledged by the control-mode
+     * stream.  SSH latency makes this important: `%session-window-changed`
+     * notifications that were already in flight can arrive after Tabby has
+     * selected a new native tab.  Treating those as current state sends the UI
+     * straight back to the old tab.
+     */
+    private pendingWindowSelection: number | null = null
     private activePaneId: number | null = null
     private closedWindows: ClosedWindowState[] = []
 
@@ -408,8 +416,21 @@ export class TmuxController {
         // Handle exit
         // Handle session-window-changed — the current window changed
         this.gateway.sessionWindowChanged$.subscribe(({ windowId }) => {
+            // A mismatched notification while a local select-window is pending
+            // describes the previous server state, not a new user selection.
+            // Ignore it until the requested selection is acknowledged. TCP
+            // preserves ordering, so that acknowledgement (or the command
+            // response) necessarily follows any such stale notification.
+            if (this.pendingWindowSelection !== null && this.pendingWindowSelection !== windowId) {
+                this.log.info(`Ignoring stale active-window notification @${windowId}; waiting for @${this.pendingWindowSelection}`)
+                return
+            }
+
             this.log.info(`Active window changed to @${windowId}`)
             this.activeWindowId = windowId
+            if (this.pendingWindowSelection === windowId) {
+                this.pendingWindowSelection = null
+            }
             this.events.next({ type: 'active-window-changed', windowId })
         })
 
@@ -499,7 +520,9 @@ export class TmuxController {
                     const windowName = match[2]
                     const active = match[3] === '1'
                     const layout = match[4]
-                    if (active) {
+                    // Do not let a slow list-windows reply undo a local tab
+                    // click that is still travelling to the tmux server.
+                    if (active && this.pendingWindowSelection === null) {
                         this.activeWindowId = windowId
                     }
                     if (!this.windowStates.has(windowId)) {
@@ -1154,7 +1177,21 @@ export class TmuxController {
     }
 
     async selectWindow (windowId: number): Promise<void> {
-        await this.gateway.sendCommand(`select-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
+        // Update the local view of the active window immediately.  Besides
+        // avoiding duplicate select-window requests from focus handlers, this
+        // gives incoming control-mode notifications a concrete local intent to
+        // compare against while the SSH round trip is pending.
+        this.activeWindowId = windowId
+        this.pendingWindowSelection = windowId
+        try {
+            await this.gateway.sendCommand(`select-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
+        } finally {
+            // A newer click may have superseded this request.  It remains the
+            // pending intent until its own response/notification arrives.
+            if (this.pendingWindowSelection === windowId) {
+                this.pendingWindowSelection = null
+            }
+        }
     }
 
     /** Swap two windows' indexes in this tmux session using stable window IDs. */
