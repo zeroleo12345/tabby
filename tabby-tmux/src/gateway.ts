@@ -67,7 +67,6 @@ export class TmuxGateway {
     public sessionChanged$ = new Subject<{ sessionName: string; sessionId: number }>()
     public sessionsChanged$ = new Subject<void>()
     public paneChanged$ = new Subject<{ windowId: number; paneId: number }>()
-    public sessionWindowChanged$ = new Subject<{ windowId: number }>()
     public paneClose$ = new Subject<{ windowId: number; paneId: number }>()
     public exit$ = new Subject<string>()
     public initialized$ = new Subject<void>()
@@ -303,10 +302,6 @@ export class TmuxGateway {
             if (this.acceptNotifications) {
                 this.sessionsChanged$.next()
             }
-        } else if (line.startsWith('%session-window-changed')) {
-            if (this.acceptNotifications) {
-                this.parseSessionWindowChanged(line)
-            }
         } else if (line.startsWith('%window-pane-changed')) {
             if (this.acceptNotifications) {
                 this.parsePaneChanged(line)
@@ -467,16 +462,6 @@ export class TmuxGateway {
             })
             // Enable notifications after session change
             this.acceptNotifications = true
-        }
-    }
-
-    private parseSessionWindowChanged (line: string): void {
-        // %session-window-changed $session @window
-        const match = line.match(/^%session-window-changed \$\d+ @(\d+)/)
-        if (match) {
-            this.sessionWindowChanged$.next({
-                windowId: parseInt(match[1])
-            })
         }
     }
 
