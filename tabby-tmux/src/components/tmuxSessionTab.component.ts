@@ -921,11 +921,9 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
     /**
      * Handle a tmux window being closed.
      *
-     * tmux automatically activates an adjacent window (next by index, or
-     * previous if it was the last) and sends %session-window-changed.
-     * The controller updates activeWindowId from that event, so we check
-     * it to decide which window to switch to — matching tmux default
-     * behavior (and browser tab close behavior).
+     * The native Tabby tab-removal path selects the next tab, or the previous
+     * one when the removed tab was last. That matches tmux's default behavior;
+     * control-mode window-change notifications are deliberately not used here.
      */
     private async handleWindowClose(windowId: number): Promise<void> {
         const paneMap = this.windowPaneTabs.get(windowId)
@@ -946,13 +944,7 @@ export class TmuxSessionTabComponent extends SplitTabComponent implements OnInit
             this.activeWindowId = null
             const remainingWindows = Array.from(this.windowPaneTabs.keys())
             if (remainingWindows.length > 0) {
-                // tmux sends %session-window-changed which updates
-                // controller.activeWindowId — prefer that over arbitrary choice
-                const tmuxActiveId = this.controller?.getActiveWindowId()
-                const target = (tmuxActiveId !== null && tmuxActiveId !== undefined && this.windowPaneTabs.has(tmuxActiveId))
-                    ? tmuxActiveId
-                    : remainingWindows[0]
-                await this.switchToWindow(target)
+                await this.switchToWindow(remainingWindows[0])
             }
         }
     }

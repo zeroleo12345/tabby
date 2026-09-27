@@ -405,14 +405,6 @@ export class TmuxController {
             this.discoverPanesFromLayout(windowId, layout, visibleLayout, zoomed)
         })
 
-        // Handle exit
-        // Handle session-window-changed — the current window changed
-        this.gateway.sessionWindowChanged$.subscribe(({ windowId }) => {
-            this.log.info(`Active window changed to @${windowId}`)
-            this.activeWindowId = windowId
-            this.events.next({ type: 'active-window-changed', windowId })
-        })
-
         // Handle pane focus changes (e.g. after pane close, tmux auto-focuses
         // the next pane and sends %window-pane-changed).
         this.gateway.paneChanged$.subscribe(({ windowId, paneId }) => {
@@ -1154,6 +1146,9 @@ export class TmuxController {
     }
 
     async selectWindow (windowId: number): Promise<void> {
+        // Native Tabby tabs are the source of truth for window selection. Do
+        // not let asynchronous control-mode notifications change that choice.
+        this.activeWindowId = windowId
         await this.gateway.sendCommand(`select-window -t @${windowId}`, TMUX_COMMAND_TOLERATE_ERRORS)
     }
 
@@ -1238,7 +1233,7 @@ export class TmuxController {
 
     /**
      * Get the tmux-side active window ID, as reported by list-windows
-     * #{window_active} or %session-window-changed. Falls back to null.
+     * #{window_active}. Falls back to null.
      */
     getActiveWindowId (): number | null {
         return this.activeWindowId
