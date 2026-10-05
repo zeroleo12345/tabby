@@ -78,6 +78,8 @@ export class XTermFrontend extends Frontend {
     private searchMatchBackground = '#ffff00'
     private copyOnSelect = false
     private suppressCopyOnSelectUntil = 0
+    private searchActive = false
+    private searchRefreshCopySuppressionTimer?: ReturnType<typeof setTimeout>
     private enableLegacyCursorSequenceFix = false
     private search = new SearchAddon()
     private searchState: SearchState = { resultCount: 0 }
@@ -287,10 +289,17 @@ export class XTermFrontend extends Frontend {
         this.ready.complete()
 
         this.xterm.loadAddon(this.search)
-        // xterm 6 addon-search updates matches on every onWriteParsed event.
-        // Keep legacy behavior by disabling automatic incremental refresh.
-        const searchAddon = this.search as any
-        searchAddon._updateMatches = () => undefined
+        this.xterm.onWriteParsed(() => {
+            if (this.copyOnSelect && this.searchActive) {
+                // The search addon refreshes matches 200 ms after terminal output and
+                // selects the active result as part of that refresh. Suppress copying
+                // that programmatic selection, while preserving user copy-on-select.
+                clearTimeout(this.searchRefreshCopySuppressionTimer)
+                this.searchRefreshCopySuppressionTimer = setTimeout(() => {
+                    this.suppressCopyOnSelectUntil = performance.now() + 250
+                }, 190)
+            }
+        })
 
         this.search.onDidChangeResults(state => {
             this.searchState = state
@@ -532,6 +541,7 @@ export class XTermFrontend extends Frontend {
     }
 
     findNext (term: string, searchOptions?: SearchOptions): SearchState {
+        this.searchActive = true
         if (this.copyOnSelect) {
             this.suppressCopyOnSelectUntil = performance.now() + 250
         }
@@ -541,6 +551,7 @@ export class XTermFrontend extends Frontend {
     }
 
     findPrevious (term: string, searchOptions?: SearchOptions): SearchState {
+        this.searchActive = true
         if (this.copyOnSelect) {
             this.suppressCopyOnSelectUntil = performance.now() + 250
         }
@@ -550,6 +561,8 @@ export class XTermFrontend extends Frontend {
     }
 
     cancelSearch (): void {
+        this.searchActive = false
+        clearTimeout(this.searchRefreshCopySuppressionTimer)
         this.search.clearDecorations()
         this.focus()
     }
