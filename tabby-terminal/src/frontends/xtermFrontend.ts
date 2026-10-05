@@ -294,9 +294,12 @@ export class XTermFrontend extends Frontend {
                 // The search addon refreshes matches 200 ms after terminal output and
                 // selects the active result as part of that refresh. Suppress copying
                 // that programmatic selection, while preserving user copy-on-select.
-                clearTimeout(this.searchRefreshCopySuppressionTimer)
+                if (this.searchRefreshCopySuppressionTimer) {
+                    clearTimeout(this.searchRefreshCopySuppressionTimer)
+                }
                 this.searchRefreshCopySuppressionTimer = setTimeout(() => {
                     this.suppressCopyOnSelectUntil = performance.now() + 250
+                    this.searchRefreshCopySuppressionTimer = undefined
                 }, 190)
             }
         })
@@ -562,7 +565,10 @@ export class XTermFrontend extends Frontend {
 
     cancelSearch (): void {
         this.searchActive = false
-        clearTimeout(this.searchRefreshCopySuppressionTimer)
+        if (this.searchRefreshCopySuppressionTimer) {
+            clearTimeout(this.searchRefreshCopySuppressionTimer)
+            this.searchRefreshCopySuppressionTimer = undefined
+        }
         this.search.clearDecorations()
         this.focus()
     }
