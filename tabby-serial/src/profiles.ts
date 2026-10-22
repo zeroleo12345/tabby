@@ -31,6 +31,7 @@ export class SerialProfilesService extends ConnectableProfileProvider<SerialProf
             scripts: [],
             slowSend: false,
             input: { backspace: 'backspace' },
+            enableLegacyCursorSequenceFix: false,
         },
         clearServiceMessagesOnConnect: false,
     }
