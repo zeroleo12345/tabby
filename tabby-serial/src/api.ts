@@ -22,6 +22,7 @@ export interface SerialProfileOptions extends StreamProcessingOptions, LoginScri
     xany: boolean
     slowSend: boolean
     input: InputProcessingOptions,
+    enableLegacyCursorSequenceFix: boolean
 }
 
 export const BAUD_RATES = [
