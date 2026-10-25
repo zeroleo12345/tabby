@@ -24,77 +24,17 @@ export class TmuxContextMenuProvider extends TabContextMenuItemProvider {
     async getItems (tab: BaseTabComponent, _tabHeader?: boolean): Promise<MenuItemOptions[]> {
         // On a TmuxSessionTab: show exit option
         if (tab instanceof TmuxSessionTabComponent) {
-            return [
-                {
-                    label: 'New Tmux Window',
-                    click: async () => {
-                        await tab.controller?.createWindow()
-                    },
-                },
-                {
-                    label: 'Duplicate Tmux Window',
-                    click: async () => {
-                        await tab.onDuplicateWindow()
-                    },
-                },
-                {
-                    label: 'Reopen Tmux Window',
-                    enabled: tab.controller?.canReopenWindow() ?? false,
-                    click: async () => {
-                        await tab.onReopenWindow()
-                    },
-                },
-                {
-                    label: 'Rename Tmux Window',
-                    click: async () => {
-                        await tab.onRenameTmuxWindow()
-                    },
-                },
-                {
-                    label: 'Exit Tmux Mode',
-                    click: async () => {
-                        await this.tmuxService.disconnect()
-                    },
-                },
-            ]
+            return []
         }
 
         // On a TmuxPaneTab: show exit, split, and close pane
         if (tab instanceof TmuxPaneTabComponent) {
-            const items: MenuItemOptions[] = [
-                {
-                    label: 'Exit Tmux Mode',
-                    click: async () => {
-                        await this.tmuxService.disconnect()
-                    },
-                },
-                {
-                    label: 'Split',
-                    submenu: [
-                        { label: 'Right', click: () => this.splitPane(tab, 'right') },
-                        { label: 'Down', click: () => this.splitPane(tab, 'down') },
-                        { label: 'Left', click: () => this.splitPane(tab, 'left') },
-                        { label: 'Up', click: () => this.splitPane(tab, 'up') },
-                    ] as MenuItemOptions[],
-                },
-                {
-                    label: 'Close',
-                    click: () => this.closePane(tab),
-                },
-            ]
-            return items
+            return []
         }
 
         // On a terminal tab: show enter tmux mode option
         if (tab instanceof BaseTerminalTabComponent) {
-            return [
-                {
-                    label: 'Enter Tmux Mode',
-                    click: async () => {
-                        await this.tmuxService.attachToTerminal(tab as BaseTerminalTabComponent<any>)
-                    },
-                },
-            ]
+            return []
         }
 
         return []
