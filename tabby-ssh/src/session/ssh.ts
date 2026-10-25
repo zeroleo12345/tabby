@@ -102,7 +102,6 @@ export class KeyboardInteractivePrompt {
 export class SSHSession {
     shell?: russh.Channel
     ssh: russh.SSHClient|russh.AuthenticatedSSHClient
-    sftp?: russh.SFTP
     forwardedPorts: ForwardedPort[] = []
     jumpChannel: russh.NewChannel|null = null
     get serviceMessage$ (): Observable<string> { return this.serviceMessage }
@@ -343,14 +342,38 @@ export class SSHSession {
         return null
     }
 
+    /** Opens SFTP on a separate SSH connection from the interactive terminal. */
     async openSFTP (): Promise<SFTPSession> {
+        this.logger.info('Opening SFTP on a dedicated SSH connection')
+        return this.openSFTPOnDedicatedConnection()
+    }
+
+    private async openSFTPOnCurrentConnection (releaseOwner?: () => Promise<void>|void): Promise<SFTPSession> {
         if (!(this.ssh instanceof russh.AuthenticatedSSHClient)) {
             throw new Error('Cannot open SFTP session before auth')
         }
-        if (!this.sftp) {
-            this.sftp = await this.ssh.activateSFTP(await this.ssh.openSessionChannel())
+        const sftp = await this.ssh.activateSFTP(await this.ssh.openSessionChannel())
+        return new SFTPSession(sftp, this.injector, releaseOwner)
+    }
+
+    private async openSFTPOnDedicatedConnection (): Promise<SFTPSession> {
+        // The SFTP-only connection must not duplicate the terminal's configured
+        // port forwards (in particular remote forwards, which can conflict).
+        const dedicatedProfile: SSHProfile = {
+            ...this.profile,
+            options: {
+                ...this.profile.options,
+                forwardedPorts: [],
+            },
         }
-        return new SFTPSession(this.sftp, this.injector)
+        const dedicatedSession = new SSHSession(this.injector, dedicatedProfile)
+        try {
+            await dedicatedSession.start()
+            return await dedicatedSession.openSFTPOnCurrentConnection(() => dedicatedSession.destroy())
+        } catch (error) {
+            await dedicatedSession.destroy()
+            throw error
+        }
     }
 
     async start (): Promise<void> {

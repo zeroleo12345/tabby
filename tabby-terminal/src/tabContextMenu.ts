@@ -71,20 +71,6 @@ export class MiscContextMenu extends TabContextMenuItemProvider {
                 click: () => tab.copyCurrentPath(),
             })
         }
-        items.push({
-            label: this.translate.instant('Focus all tabs'),
-            click: () => {
-                this.multifocus.focusAllTabs()
-            },
-        })
-        if (tab.parent instanceof SplitTabComponent && tab.parent.getAllTabs().length > 1) {
-            items.push({
-                label: this.translate.instant('Focus all panes'),
-                click: () => {
-                    this.multifocus.focusAllPanes()
-                },
-            })
-        }
         return items
     }
 }
@@ -168,47 +154,7 @@ export class SaveAsProfileContextMenu extends TabContextMenuItemProvider {
 
     async getItems (tab: BaseTabComponent): Promise<MenuItemOptions[]> {
         if (tab instanceof BaseTerminalTabComponent) {
-            return [
-                {
-                    label: this.translate.instant('Save as profile'),
-                    click: async () => {
-                        const modal = this.ngbModal.open(PromptModalComponent)
-                        modal.componentInstance.prompt = this.translate.instant('New profile name')
-                        modal.componentInstance.value = tab.profile.name
-                        const name = (await modal.result.catch(() => null))?.value
-                        if (!name) {
-                            return
-                        }
-
-                        const options = JSON.parse(JSON.stringify(tab.profile.options))
-
-                        const cwd = await tab.session?.getWorkingDirectory() ?? tab.profile.options.cwd
-                        if (cwd) {
-                            options.cwd = cwd
-                        }
-
-                        const profile: PartialProfile<Profile> = {
-                            type: tab.profile.type,
-                            name,
-                            options,
-                        }
-
-                        profile.id = `${profile.type}:custom:${slugify(name)}:${uuidv4()}`
-                        profile.group = tab.profile.group
-                        profile.icon = tab.profile.icon
-                        profile.color = tab.profile.color
-                        profile.disableDynamicTitle = tab.profile.disableDynamicTitle
-                        profile.behaviorOnSessionEnd = tab.profile.behaviorOnSessionEnd
-
-                        this.config.store.profiles = [
-                            ...this.config.store.profiles,
-                            profile,
-                        ]
-                        this.config.save()
-                        this.notifications.info(this.translate.instant('Saved'))
-                    },
-                },
-            ]
+            return []
         }
 
         return []

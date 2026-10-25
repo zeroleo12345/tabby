@@ -22,31 +22,7 @@ export class NewTabContextMenu extends TabContextMenuItemProvider {
     async getItems (tab: BaseTabComponent, tabHeader?: boolean): Promise<MenuItemOptions[]> {
         const profiles = (await this.profilesService.getProfiles()).filter(x => x.type === 'local') as LocalProfile[]
 
-        const items: MenuItemOptions[] = [
-            {
-                label: this.translate.instant('New terminal'),
-                click: () => {
-                    if (tab instanceof TerminalTabComponent) {
-                        this.profilesService.openNewTabForProfile(tab.profile)
-                    } else {
-                        this.terminalService.openTab()
-                    }
-                },
-            },
-            {
-                label: this.translate.instant('New with profile'),
-                submenu: profiles.map(profile => ({
-                    label: profile.name,
-                    click: async () => {
-                        let workingDirectory = profile.options.cwd
-                        if (!workingDirectory && tab instanceof TerminalTabComponent) {
-                            workingDirectory = await tab.session?.getWorkingDirectory() ?? null
-                        }
-                        await this.terminalService.openTab(profile, workingDirectory)
-                    },
-                })),
-            },
-        ]
+        const items: MenuItemOptions[] = []
 
         if (this.uac?.isAvailable) {
             items.push({

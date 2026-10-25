@@ -28,47 +28,8 @@ export class TabManagementContextMenu extends TabContextMenuItemProvider {
     }
 
     async getItems (tab: BaseTabComponent): Promise<MenuItemOptions[]> {
-        let items: MenuItemOptions[] = [
-            {
-                label: this.translate.instant('Close'),
-                commandLabel: this.translate.instant('Close tab'),
-                click: () => {
-                    if (this.app.tabs.includes(tab)) {
-                        this.app.closeTab(tab, true)
-                    } else {
-                        tab.destroy()
-                    }
-                },
-            },
-        ]
+        const items: MenuItemOptions[] = []
         if (!tab.parent) {
-            items = [
-                ...items,
-                {
-                    label: this.translate.instant('Close other tabs'),
-                    click: () => {
-                        for (const t of this.app.tabs.filter(x => x !== tab)) {
-                            this.app.closeTab(t, true)
-                        }
-                    },
-                },
-                {
-                    label: this.translate.instant('Close tabs to the right'),
-                    click: () => {
-                        for (const t of this.app.tabs.slice(this.app.tabs.indexOf(tab) + 1)) {
-                            this.app.closeTab(t, true)
-                        }
-                    },
-                },
-                {
-                    label: this.translate.instant('Close tabs to the left'),
-                    click: () => {
-                        for (const t of this.app.tabs.slice(0, this.app.tabs.indexOf(tab))) {
-                            this.app.closeTab(t, true)
-                        }
-                    },
-                },
-            ]
         } else if (tab.parent instanceof SplitTabComponent) {
             const directions: SplitDirection[] = ['r', 'b', 'l', 't']
             items.push({

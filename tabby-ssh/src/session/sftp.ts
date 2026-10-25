@@ -46,13 +46,28 @@ export class SFTPSession {
     get closed$ (): Observable<void> { return this.closed }
     private closed = new Subject<void>()
     private logger: Logger
+    private ownerReleased = false
 
-    constructor (private sftp: russh.SFTP, injector: Injector) {
+    constructor (
+        private sftp: russh.SFTP,
+        injector: Injector,
+        private releaseOwner?: () => Promise<void>|void,
+    ) {
         this.logger = injector.get(LogService).create('sftp')
         sftp.closed$.subscribe(() => {
             this.closed.next()
             this.closed.complete()
+            void this.releaseOwnedConnection()
         })
+    }
+
+    /**
+     * Releases a dedicated SSH connection, if this SFTP session owns one.
+     * Regular SFTP panels share the terminal's connection and are intentionally
+     * left open to preserve the existing behaviour.
+     */
+    async close (): Promise<void> {
+        await this.releaseOwnedConnection()
     }
 
     async readdir (p: string): Promise<SFTPFile[]> {
@@ -162,5 +177,13 @@ export class SFTPSession {
             size: entry.metadata.size,
             modified: new Date((entry.metadata.mtime ?? 0) * 1000),
         }
+    }
+
+    private async releaseOwnedConnection (): Promise<void> {
+        if (this.ownerReleased || !this.releaseOwner) {
+            return
+        }
+        this.ownerReleased = true
+        await this.releaseOwner()
     }
 }
